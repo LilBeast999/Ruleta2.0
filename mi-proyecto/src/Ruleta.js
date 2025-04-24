@@ -1,128 +1,185 @@
+// src/Ruleta.js
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 
-const Ruleta = ({ titulos = [] }) => {
-    const canvasRef = useRef(null);
-    const [spinAngle, setSpinAngle] = useState(0);
-    const [spinning, setSpinning] = useState(false);
-    const [ganador, setGanador] = useState(null);
+export default function Ruleta({ titulos = [] }) {
+  const canvasRef = useRef(null);
+  const [spinAngle, setSpinAngle] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+  const [ganador, setGanador] = useState(null);
 
-    const canvasSize = 300;
-    const numSegmentos = titulos.length;
-    const segmentAngle = 360 / (numSegmentos || 1);
+  const size = 500;
+  const center = size / 2;
+  const radius = center - 8;      // espacio para el borde
+  const n = titulos.length;
+  const slice = 360 / (n || 1);
 
-    // Envuelve drawWheel en useCallback para poder usarlo como dependencia
-    const drawWheel = useCallback(() => {
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvasSize, canvasSize);
-        const center = canvasSize / 2;
-        const radius = center;
-        const colores = ['#FFCC00', '#FF6666'];
+  const colors = [
+    '#e6194b','#f58231','#ffe119','#3cb44b',
+    '#42d4f4','#4363d8','#f032e6','#a9a9a9'
+  ];
 
-        for (let i = 0; i < numSegmentos; i++) {
-            const startAngle = ((i * segmentAngle) * Math.PI) / 180;
-            const endAngle = (((i + 1) * segmentAngle) * Math.PI) / 180;
-            ctx.beginPath();
-            ctx.moveTo(center, center);
-            ctx.arc(center, center, radius, startAngle, endAngle);
-            ctx.closePath();
-            ctx.fillStyle = colores[i % colores.length];
-            ctx.fill();
-            ctx.strokeStyle = '#fff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
+  // Dibuja segmentos, texto 
+  const draw = useCallback(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
 
-            // Dibuja el texto en el centro del segmento
-            const midAngle = (startAngle + endAngle) / 2;
-            ctx.save();
-            ctx.translate(center, center);
-            ctx.rotate(midAngle);
-            ctx.textAlign = 'right';
-            ctx.fillStyle = '#000';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.fillText(titulos[i], radius - 10, 5);
-            ctx.restore();
-        }
-    }, [titulos, canvasSize, numSegmentos, segmentAngle]);
+    titulos.forEach((t, i) => {
+      const start = (i * slice) * Math.PI / 180;
+      const end = ((i + 1) * slice) * Math.PI / 180;
 
-    // Usa el hook useEffect con drawWheel como dependencia
-    useEffect(() => {
-        drawWheel();
-    }, [drawWheel]);
+      // Segmento
+      ctx.beginPath();
+      ctx.moveTo(center, center);
+      ctx.arc(center, center, radius, start, end);
+      ctx.closePath();
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-    // Gira la ruleta
-    const spinWheel = () => {
-        if (spinning || numSegmentos === 0) return;
-        setSpinning(true);
-        setGanador(null);
-        const indiceGanador = Math.floor(Math.random() * numSegmentos);
-        const centroSegmento = indiceGanador * segmentAngle + segmentAngle / 2;
-        const vueltasCompletas = Math.floor(Math.random() * 10) + 3; // 3 a 12 vueltas
-        // Calcula el ángulo final, de forma absoluta, para que el centro del segmento ganador quede a 0° (a la derecha)
-        const finalAngle = vueltasCompletas * 360 - centroSegmento;
-        setSpinAngle(finalAngle);
-        setTimeout(() => {
-            setSpinning(false);
-            setGanador(titulos[indiceGanador]);
-        }, 4000);
-    };
+      // Texto
+      const mid = (start + end) / 2;
+      ctx.save();
+      ctx.translate(center, center);
+      ctx.rotate(mid);
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText(t, radius - 20, 6);
+      ctx.restore();
 
-    return (
-        <div style={{ textAlign: 'center', position: 'relative' }}>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
-                {/* Contenedor de la ruleta */}
-                <div
-                    style={{
-                        margin: 'auto',
-                        width: canvasSize,
-                        height: canvasSize,
-                        borderRadius: '50%',
-                        boxShadow: '0 0 15px rgba(0,0,0,0.3)',
-                        transition: 'transform 4s ease-out',
-                        transform: `rotate(${spinAngle}deg)`
-                    }}
-                >
-                    <canvas ref={canvasRef} width={canvasSize} height={canvasSize} style={{ borderRadius: '50%' }} />
-                </div>
-                {/* Indicador: flecha que apunta al segmento ganador */}
-                {/* Indicador: flecha apuntando horizontalmente hacia el centro (a la derecha) */}
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        right: '-20px',
-                        transform: 'translateY(-50%)',
-                        width: 0,
-                        height: 0,
-                        borderTop: '15px solid transparent',
-                        borderBottom: '15px solid transparent',
-                        borderRight: '20px solid red'
-                    }}
-                ></div>
-            </div>
-            <button
-                onClick={spinWheel}
-                disabled={spinning}
-                style={{
-                    marginTop: 20,
-                    padding: '10px 20px',
-                    borderRadius: '5px',
-                    backgroundColor: '#61dafb',
-                    border: 'none',
-                    fontSize: '16px',
-                    cursor: 'pointer'
-                }}
-            >
-                {spinning ? 'Girando...' : 'Girar ruleta'}
-            </button>
-            {ganador && (
-                <div style={{ marginTop: 20, fontSize: 18, color: '#fff' }}>
-                    Resultado: <strong>{ganador}</strong>
-                </div>
-            )}
-        </div>
-    );
+    });
+  }, [titulos, slice, radius, center]);
+
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+const spin = () => {
+  if (spinning || n === 0) return;
+  setSpinning(true);
+  setGanador(null);
+
+  // 1) Elegimos el índice ganador
+  const win = Math.floor(Math.random() * n);
+
+  // 2) Calculamos el ángulo central de ese segmento
+  const mid = win * slice + slice / 2;
+
+  // 3) Cuántas vueltas completas
+  const rounds = Math.floor(Math.random() * 5) + 4;
+
+  // 4) Offset para que el centro acabe en 270° (la flecha de arriba)
+  const pointerOffset = 90;
+
+  // 5) Ángulo final = vueltas + offset – posición del centro
+  const finalAngle = rounds * 360 + pointerOffset - mid;
+
+  // 6) Aplicamos el giro
+  setSpinAngle(prev => prev + finalAngle);
+
+  // 7) Tras la animación, marcamos ganador
+  setTimeout(() => {
+    setSpinning(false);
+    setGanador(titulos[win]);
+  }, 4500);
 };
 
-export default Ruleta;
+
+  // Estilos inline
+  const styles = {
+    container: {
+      position: 'relative',
+      display: 'inline-block',
+      textAlign: 'center',
+    },
+    pointer: {
+      position: 'absolute',
+      top: -0,
+      left: '50%',
+      transform: 'translateX(-50%) rotate(180deg)',
+      width: 0,
+      height: 0,
+      borderLeft: '20px solid transparent',
+      borderRight: '20px solid transparent',
+      borderBottom: '25px solid #ccc',
+      zIndex: 2,
+    },
+    wheel: {
+      position: 'relative',
+      width: size,
+      height: size,
+      border: '8px solid #eee',
+      borderRadius: '50%',
+      boxShadow: '0 0 15px rgba(0,0,0,0.2)',
+      transition: 'transform 4s cubic-bezier(0.33,1,0.68,1)',
+      transform: `rotate(${spinAngle}deg)`,
+    },
+    canvas: {
+      borderRadius: '50%',
+      display: 'block',
+    },
+    center: {
+      position: 'absolute',
+      width: 60,
+      height: 60,
+      background: '#fff',
+      border: '4px solid #ddd',
+      borderRadius: '50%',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%,-50%)',
+      zIndex: 1,
+    },
+    button: {
+      display: 'block',
+      margin: '20px auto 0',
+      padding: '10px 24px',
+      border: 'none',
+      borderRadius: '30px',
+      background: '#61dafb',
+      color: '#000',
+      fontSize: 16,
+      fontWeight: 'bold',
+      cursor: 'pointer',
+    },
+    winner: {
+      marginTop: 16,
+      color: '#333',
+      fontSize: 18,
+    }
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.pointer} />
+
+      <div style={styles.wheel}>
+        <canvas
+          ref={canvasRef}
+          width={size}
+          height={size}
+          style={styles.canvas}
+        />
+        <div style={styles.center} />
+      </div>
+
+      <button
+        style={styles.button}
+        onClick={spin}
+        disabled={spinning}
+      >
+        {spinning ? 'Girando…' : 'Girar'}
+      </button>
+
+      {ganador && (
+        <div style={styles.winner}>
+          Resultado: <strong>{ganador}</strong>
+        </div>
+      )}
+    </div>
+  );
+}
