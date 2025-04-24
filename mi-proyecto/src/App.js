@@ -1,43 +1,51 @@
+// src/App.js
 import React, { useState } from 'react';
 import Ruleta from './Ruleta';
 import './App.css';
+import logo from './logo.svg';
 
 function App() {
-  const defaultTitulos = 'Título 1, Título 2, Título 3, Título 4, Título 5';
-  const [input, setInput] = useState(defaultTitulos);
-  const titulos = input.split(',').map(t => t.trim()).filter(t => t !== '');
+  // Estado “crudo”: el contenido del textarea
+  const defaultInput = ['Titulo1','Titulo2','Titulo3','Titulo4'].join('\n');
+  const [rawInput, setRawInput] = useState(defaultInput);
+
+  // Derivamos el array de títulos a partir de las líneas no vacías
+  const titulos = rawInput
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '');
 
   return (
     <div className="App">
-      <header
-        className="App-header"
-        style={{
-          padding: '20px',
-          backgroundColor: '#282c34',
-          minHeight: '100vh',
-          color: '#fff'
-        }}
-      >
-        <h1 style={{ marginBottom: '20px' }}>Ruleta Aleatoria</h1>
-        <div style={{ marginBottom: '20px' }}>
-          <label htmlFor="titulos" style={{ marginRight: '10px' }}>
-            Titulos (separados por comas):
-          </label>
-          <input
-            type="text"
-            id="titulos"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            style={{
-              padding: '8px',
-              width: '60%',
-              borderRadius: '5px',
-              border: 'none'
-            }}
-          />
+      {/* CABECERA */}
+      <header className="header">
+        <div className="header-logo">
+          <img src={logo} alt="Logo Universidad" />
         </div>
-        <Ruleta titulos={titulos} />
+        <h1 className="header-title">La Ruleta de Incidencias</h1>
+        <div className="header-button">
+          <button>Volver al menú</button>
+        </div>
       </header>
+
+      {/* CONTENIDO PRINCIPAL */}
+      <main className="content">
+        <section className="ruleta-section">
+          <Ruleta titulos={titulos} />
+        </section>
+
+        <section className="titulos-section">
+          <h2>Títulos para la Ruleta</h2>
+
+          {/* Aquí el textarea en vez de un <ul> */}
+          <textarea
+            className="titulos-textarea"
+            value={rawInput}
+            onChange={e => setRawInput(e.target.value)}
+            placeholder="Escribe cada opción en una línea"
+          />
+        </section>
+      </main>
     </div>
   );
 }
