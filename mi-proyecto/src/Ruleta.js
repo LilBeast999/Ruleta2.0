@@ -58,21 +58,36 @@ export default function Ruleta({ titulos = [] }) {
     draw();
   }, [draw]);
 
-  const spin = () => {
-    if (spinning || n === 0) return;
-    setSpinning(true);
-    setGanador(null);
-    const win = Math.floor(Math.random() * n);
-    const mid = win * slice + slice / 2;
-    const rounds = Math.floor(Math.random() * 5) + 4;
-    const final = rounds * 360 - mid;
-    setSpinAngle(prev => prev + final);
+const spin = () => {
+  if (spinning || n === 0) return;
+  setSpinning(true);
+  setGanador(null);
 
-    setTimeout(() => {
-      setSpinning(false);
-      setGanador(titulos[win]);
-    }, 4500);
-  };
+  // 1) Elegimos el índice ganador
+  const win = Math.floor(Math.random() * n);
+
+  // 2) Calculamos el ángulo central de ese segmento
+  const mid = win * slice + slice / 2;
+
+  // 3) Cuántas vueltas completas
+  const rounds = Math.floor(Math.random() * 5) + 4;
+
+  // 4) Offset para que el centro acabe en 270° (la flecha de arriba)
+  const pointerOffset = 90;
+
+  // 5) Ángulo final = vueltas + offset – posición del centro
+  const finalAngle = rounds * 360 + pointerOffset - mid;
+
+  // 6) Aplicamos el giro
+  setSpinAngle(prev => prev + finalAngle);
+
+  // 7) Tras la animación, marcamos ganador
+  setTimeout(() => {
+    setSpinning(false);
+    setGanador(titulos[win]);
+  }, 4500);
+};
+
 
   // Estilos inline
   const styles = {
@@ -83,9 +98,9 @@ export default function Ruleta({ titulos = [] }) {
     },
     pointer: {
       position: 'absolute',
-      top: -20,
+      top: -0,
       left: '50%',
-      transform: 'translateX(-50%)',
+      transform: 'translateX(-50%) rotate(180deg)',
       width: 0,
       height: 0,
       borderLeft: '20px solid transparent',
