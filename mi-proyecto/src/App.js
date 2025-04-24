@@ -1,12 +1,16 @@
 // src/App.js
 import React, { useState } from 'react';
 import Ruleta from './Ruleta';
+import Login from './Login';
 import './App.css';
 import logo from './logo.svg';
 
 function App() {
+  // Estado para el login
+  const [user, setUser] = useState(null);
+
   // Estado “crudo”: el contenido del textarea
-  const defaultInput = ['Titulo1','Titulo2','Titulo3','Titulo4'].join('\n');
+  const defaultInput = ['Titulo1', 'Titulo2', 'Titulo3', 'Titulo4'].join('\n');
   const [rawInput, setRawInput] = useState(defaultInput);
 
   // Derivamos el array de títulos a partir de las líneas no vacías
@@ -14,6 +18,11 @@ function App() {
     .split('\n')
     .map(line => line.trim())
     .filter(line => line !== '');
+
+  // Si el usuario no está autenticado, mostramos el Login
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
 
   return (
     <div className="App">
@@ -36,8 +45,6 @@ function App() {
 
         <section className="titulos-section">
           <h2>Títulos para la Ruleta</h2>
-
-          {/* Aquí el textarea en vez de un <ul> */}
           <textarea
             className="titulos-textarea"
             value={rawInput}
