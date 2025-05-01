@@ -45,10 +45,10 @@ export default function Ruleta({ titulos = [] }) {
       ctx.save();
       ctx.translate(center, center);
       ctx.rotate(mid);
-      ctx.textAlign = 'right';
+      ctx.textAlign = "center"; 
       ctx.fillStyle = '#fff';
       ctx.font = 'bold 16px sans-serif';
-      ctx.fillText(t, radius - 20, 6);
+      ctx.fillText(t, radius * 0.7, 8);
       ctx.restore();
 
     });
@@ -56,6 +56,8 @@ export default function Ruleta({ titulos = [] }) {
 
   useEffect(() => {
     draw();
+    window.addEventListener('resize', draw);
+    return () => window.removeEventListener('resize', draw);
   }, [draw]);
 
 const spin = () => {
@@ -63,31 +65,23 @@ const spin = () => {
   setSpinning(true);
   setGanador(null);
 
-  // 1) Elegimos el índice ganador
+  // 1. Selección del ganador
   const win = Math.floor(Math.random() * n);
+  
+  // 2. Cálculo angular simplificado (como el código funcional)
+  const centroSegmento = (win * slice) + (slice / 2);
+  const vueltas = Math.floor(Math.random() * 10) + 3; // 3 a 12 vueltas
+  const finalAngle = vueltas * 360 - centroSegmento;
 
-  // 2) Calculamos el ángulo central de ese segmento
-  const mid = win * slice + slice / 2;
+  // 3. Rotación directa (sin acumular)
+  setSpinAngle(finalAngle);
 
-  // 3) Cuántas vueltas completas
-  const rounds = Math.floor(Math.random() * 5) + 4;
-
-  // 4) Offset para que el centro acabe en 270° (la flecha de arriba)
-  const pointerOffset = 90;
-
-  // 5) Ángulo final = vueltas + offset – posición del centro
-  const finalAngle = rounds * 360 + pointerOffset - mid;
-
-  // 6) Aplicamos el giro
-  setSpinAngle(prev => prev + finalAngle);
-
-  // 7) Tras la animación, marcamos ganador
+  // 4. Quitar el signo negativo del CSS
   setTimeout(() => {
     setSpinning(false);
-    setGanador(titulos[win]);
+    setGanador(titulos[win]); // Resultado directo sin recálculos
   }, 4500);
 };
-
 
   // Estilos inline
   const styles = {
@@ -115,7 +109,7 @@ const spin = () => {
       border: '8px solid #eee',
       borderRadius: '50%',
       boxShadow: '0 0 15px rgba(0,0,0,0.2)',
-      transition: 'transform 4s cubic-bezier(0.33,1,0.68,1)',
+      transition: 'transform 4s ease-out', 
       transform: `rotate(${spinAngle}deg)`,
     },
     canvas: {

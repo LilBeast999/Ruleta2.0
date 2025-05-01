@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Ruleta from './Ruleta';
 import Login from './Login';
 import './App.css';
-import logo from './logo.svg';
+import logo from './logo.png'; 
 
 function App() {
   // Estado para el login

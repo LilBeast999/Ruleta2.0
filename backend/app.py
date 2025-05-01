@@ -3,23 +3,32 @@ from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from flask_cors import CORS, cross_origin
+from sqlalchemy import text
 
-# carga las variables para la base de datos desde el archivo .env
+# Carga las variables para la base de datos desde el archivo .env
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
-# variables de entorno para la base de datos
-DATABASE_USER = os.getenv("DATABASE_USER")
-DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
-DATABASE_HOST = os.getenv("DATABASE_HOST")
-DATABASE_NAME = os.getenv("DATABASE_NAME")
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise Exception("No se encontró DATABASE_URL en el archivo .env")
 
-app.config["SQLALCHEMY_DATABASE_URI"] = f'postgresql://{DATABASE_USER}:{DATABASE_PASSWORD}@{DATABASE_HOST}/{DATABASE_NAME}'
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
+# Verifica la conexión dentro del contexto de la aplicación
+with app.app_context():
+    try:
+        with db.engine.connect() as connection:
+            result = connection.execute(text("SELECT 1"))
+            # Si deseas ver el resultado, puedes imprimirlo:
+            print("base de datos conectada exitosamente")
+    except Exception as e:
+        raise Exception(f"No se pudo conectar a la base de datos: {e}")
 
 # Definición del modelo de la tabla 'profesor'
 class Profesor(db.Model):
@@ -45,7 +54,6 @@ def login():
     if not rut or not password:
         return jsonify({"error": "Faltan datos requeridos"}), 400
 
-    # consulta a la base de datos para verificar el RUT y la contraseña
     profesor = Profesor.query.filter_by(rut=rut, password=password).first()
     if profesor:
         return jsonify({"message": "Profesor autenticado correctamente"})
