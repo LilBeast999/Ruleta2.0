@@ -70,10 +70,10 @@ function Login({ onLogin }) {
       return "El código de recuperación debe tener exactamente 9 caracteres";
     }
 
-    const rutRegexHyphen = /^[0-9]{7,8}-[0-9kK]$/;
-    const rutRegexDot = /^[0-9]{7}\.[0-9]$/;
-    if (!rutRegexHyphen.test(rut) && !rutRegexDot.test(rut)) {
-      return "El RUT debe estar en formato xxxxxxxx-x o xxxxxxx.x";
+    // Validar RUT: debe tener 7 u 8 dígitos seguidos de un guión y un dígito o 'k/K'
+    const rutRegex = /^[0-9]{7,8}-[0-9kK]$/;
+    if (!rutRegex.test(rut)) {
+      return "El RUT debe estar en formato xxxxxxxx-x, donde x son dígitos y el último es un dígito o 'k/K'";
     }
     return null;
   };
