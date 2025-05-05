@@ -1,0 +1,78 @@
+/* Reset y tipografía */
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: sans-serif;
+  background: #fff;
+}
+
+/* CABECERA */
+.header {
+  display: flex;
+  align-items: center;
+  padding: 10px 20px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #ddd;
+}
+.header-logo img {
+  height: 50px;
+}
+.header-title {
+  flex: 1;
+  text-align: center;
+  font-size: 24px;
+  color: #333;
+  margin: 0;
+}
+.header-button button {
+  background: #d32f2f;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* ÁREA DE CONTENIDO: dos columnas */
+.content {
+  display: flex;
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+.ruleta-section {
+  flex: 1;
+  text-align: center;
+}
+.titulos-section {
+  flex: 1;
+  padding-left: 40px;
+}
+.titulos-section h2 {
+  margin-top: 0;
+  color: #333;
+}
+.titulos-list {
+  list-style: none;
+  padding: 10px;
+  border: 6px solid #444;
+  max-width: 300px;
+}
+.titulos-list li {
+  margin: 8px 0;
+  font-size: 18px;
+  color: #222;
+}
+
+.titulos-textarea {
+  width: 100%;
+  height: 220px;           /* ajusta la altura según convenga */
+  padding: 10px;
+  font-size: 16px;
+  line-height: 1.4;
+  border: 6px solid #444;  /* mismo gris oscuro del mockup */
+  border-radius: 4px;
+  resize: vertical;        /* el usuario puede estirar en vertical */
+  box-sizing: border-box;
+}
