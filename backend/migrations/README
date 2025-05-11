@@ -1,1 +1,15 @@
 Single-database configuration for Flask.
+
+Se necesita tener instalado Flask-Migrate:
+pip install Flask-Migrate
+
+Pasos para migrar:
+
+Este paso crea la carpeta migrations. Solo se debe ejecutar una vez en el proyecto, no es necesario ejecutar nuevamente
+flask db init
+
+Crear una nueva migración, agrega cambios realizados en los modelos
+flask db migrate -m "<nombre de los cambios>"
+
+Aplicar los cambios a la base de datos, ejecuta migracion
+flask db upgrade
