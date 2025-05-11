@@ -9,4 +9,9 @@ class Sorteo(db.Model):
     id_incidencia = db.Column(db.Integer, db.ForeignKey('incidencia.id'), nullable=False)
     id_alumno = db.Column(db.Integer, db.ForeignKey('alumno.id'), nullable=False)
 
+    grupo = db.relationship('Grupo', backref='sorteos')
+    profesor = db.relationship('Profesor', backref='sorteos')
+    incidencia = db.relationship('Incidencia', backref='sorteos')
+    alumno = db.relationship('Alumno', backref='sorteos')
+
 

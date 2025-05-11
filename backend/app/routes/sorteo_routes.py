@@ -51,3 +51,38 @@ def obtener_sorteos():
         return jsonify(resultado), 200
     except Exception as e:
         return jsonify({"error": f"Error al obtener sorteos: {e}"}), 500
+
+@sorteo_bp.route('/sorteo/<int:id>', methods=['GET'])
+def obtener_sorteo_por_id(id):
+    try:
+        sorteo = Sorteo.query.get(id)
+        if not sorteo:
+            return jsonify({"error": "Sorteo no encontrado"}), 404
+
+        resultado = {
+            "id": sorteo.id,
+            "fecha": sorteo.fecha.isoformat(),
+            "grupo": {
+                "id": sorteo.grupo.id,
+                "nombre": sorteo.grupo.nombre
+            },
+            "profesor": {
+                "id": sorteo.profesor.id,
+                "nombre": sorteo.profesor.nombre,
+                "apellido": sorteo.profesor.apellido
+            },
+            "incidencia": {
+                "id": sorteo.incidencia.id,
+                "descripcion": sorteo.incidencia.descripcion,
+                "duracion": sorteo.incidencia.duracion
+            },
+            "alumno": {
+                "id": sorteo.alumno.id,
+                "nombre": sorteo.alumno.nombre,
+                "apellido": sorteo.alumno.apellido
+            }
+        }
+
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"error": f"Error al obtener sorteo: {e}"}), 500
