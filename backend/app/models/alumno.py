@@ -7,3 +7,5 @@ class Alumno(db.Model):
     nombre = db.Column(db.String(100), nullable=False)
     apellido = db.Column(db.String(100), nullable=False)
     id_grupo = db.Column(db.Integer, db.ForeignKey('grupo.id'), nullable=True)
+
+    grupo = db.relationship('Grupo', backref=db.backref('alumnos', lazy=True))
