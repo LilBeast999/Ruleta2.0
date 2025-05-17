@@ -7,7 +7,7 @@ export default function RuletaIncidencias() {
   const [incidencias, setIncidencias] = useState([]);
   const [miembros, setMiembros] = useState([]);
 
-  const [fase, setFase] = useState(0); // Ruletas: 0=grupos,1=categorías,2=incidencias,3=miembros
+  const [fase, setFase] = useState(0); // 0=grupos,1=categorías,2=incidencias
   const [grupoSel, setGrupoSel] = useState(null);
   const [catSel, setCatSel]     = useState(null);
   const [incSel, setIncSel]     = useState(null);
@@ -16,6 +16,7 @@ export default function RuletaIncidencias() {
   const [comentario, setComentario] = useState('');
   const [individual, setIndividual] = useState(false);
 
+  // Estilo botón común
   const botonEstilo = {
     padding: '12px 24px',
     fontSize: 18,
@@ -32,7 +33,7 @@ export default function RuletaIncidencias() {
       .catch(() => setGrupos([]));
   }, []);
 
-  // 2) Al pasar a fase 1, carga categorías automáticamente
+  // 2) Al entrar en fase 1, cargo categorías
   useEffect(() => {
     if (fase === 1 && grupoSel) {
       fetch('http://localhost:5000/categorias')
@@ -42,7 +43,7 @@ export default function RuletaIncidencias() {
     }
   }, [fase, grupoSel]);
 
-  // 3) Al pasar a fase 2, carga incidencias automáticamente
+  // 3) Al entrar en fase 2, cargo incidencias
   useEffect(() => {
     if (fase === 2 && catSel) {
       fetch(`http://localhost:5000/incidencias/categoria/${catSel.id}`)
@@ -52,7 +53,7 @@ export default function RuletaIncidencias() {
     }
   }, [fase, catSel]);
 
-  // 4) Carga miembros si individual + fase 2
+  // 4) Si modo individual + fase 2, cargo miembros
   useEffect(() => {
     if (individual && fase === 2 && grupoSel) {
       fetch(`http://localhost:5000/grupo/${grupoSel.id}`)
@@ -65,6 +66,7 @@ export default function RuletaIncidencias() {
     }
   }, [individual, fase, grupoSel]);
 
+  // Rueda genérica
   function Wheel({ titulos = [], onDone }) {
     const canvasRef = useRef(null);
     const [spinAngle, setSpinAngle] = useState(0);
@@ -122,7 +124,7 @@ export default function RuletaIncidencias() {
       setTimeout(()=>{
         setSpinning(false);
         onDone(idx);
-      }, 4500);
+      },4500);
     };
 
     return (
@@ -133,8 +135,12 @@ export default function RuletaIncidencias() {
           transform:`rotate(${spinAngle}deg)`,
           transition:'transform 4.5s ease-out'
         }}>
-          <canvas ref={canvasRef} width={size} height={size}
-            style={{ borderRadius:'50%', display:'block' }} />
+          <canvas
+            ref={canvasRef}
+            width={size}
+            height={size}
+            style={{ borderRadius:'50%', display:'block' }}
+          />
           <div style={{
             position:'absolute', width:70, height:70,
             background:'#fff', border:'5px solid #ddd',
@@ -155,17 +161,46 @@ export default function RuletaIncidencias() {
     );
   }
 
+  const guardarSorteo = () => {
+    const payload = {
+      id_grupo: grupoSel.id,
+      fecha: new Date().toISOString(),
+      id_profesor: 4,
+      id_incidencia: incSel.id,
+      id_alumno: individual ? mbrSel.id : null
+    };
+
+    console.log('Enviando sorteo:', payload);
+
+    fetch('http://localhost:5000/sorteo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(res => {
+        if (res.ok) return res.json();
+        return res.json().then(e => Promise.reject(e));
+      })
+      .then(() => {
+        alert('🎉 Sorteo guardado correctamente.');
+      })
+      .catch(err => {
+        console.error('Error guardando sorteo:', err);
+        alert(`⚠️ Error al guardar el sorteo:\n${err.error || JSON.stringify(err)}`);
+      });
+  };
+
+
   return (
     <div style={{ display:'flex', gap:60, alignItems:'flex-start' }}>
+      {/* Columna de ruleta */}
       <div style={{ flexShrink:0 }}>
         {fase===0 && (
           <Wheel
             titulos={grupos.map(g=>g.nombre)}
             onDone={i=>{
               setGrupoSel(grupos[i]);
-              setCatSel(null);
-              setIncSel(null);
-              setMbrSel(null);
+              setCatSel(null); setIncSel(null); setMbrSel(null);
               setFase(1);
             }}
           />
@@ -175,8 +210,7 @@ export default function RuletaIncidencias() {
             titulos={categorias.map(c=>c.nombre)}
             onDone={i=>{
               setCatSel(categorias[i]);
-              setIncSel(null);
-              setMbrSel(null);
+              setIncSel(null); setMbrSel(null);
               setFase(2);
             }}
           />
@@ -234,14 +268,8 @@ export default function RuletaIncidencias() {
           <label style={{fontSize:18,marginLeft:10}}>Individual</label>
         </div>
 
-        {fase===2 && ((individual && mbrSel) || (!individual && incSel)) && (
-          <button onClick={()=>{
-            if(individual) {
-              alert(`Guardado INDIVIDUAL\nGrupo:${grupoSel.nombre}\nAlumno:${mbrSel.nombre} ${mbrSel.apellido}\nIncidencia:${incSel.descripcion}`);
-            } else {
-              alert(`Guardado GRUPAL\nGrupo:${grupoSel.nombre}\nIncidencia:${incSel.descripcion}`);
-            }
-          }} style={botonEstilo}>
+        {fase===2 && incSel && (!individual || mbrSel) && (
+          <button onClick={guardarSorteo} style={botonEstilo}>
             Guardar resultado
           </button>
         )}
