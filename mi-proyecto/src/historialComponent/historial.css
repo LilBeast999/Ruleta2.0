@@ -46,17 +46,17 @@
 }
 
 .filtros-panel {
-  flex: 0 0 250px; /* Esto fija el tamaño del panel de filtros */
-  min-width: 250px; /* Asegura que no se encoja */
-  max-width: 250px; /* Asegura que no se expanda */
-  height: fit-content; /* Para que no se estire verticalmente */
+  flex: 0 0 250px; 
+  min-width: 250px; 
+  max-width: 250px;
+  height: fit-content;
   padding: 15px;
   border-radius: 5px;
   border: 1px solid #ddd;
   background-color: #f9f9f9;
-  align-self: flex-start; /* Lo mantiene en la parte superior */
-  position: sticky; /* Opcional: lo mantiene visible al hacer scroll */
-  top: 20px; /* Opcional: distancia desde la parte superior cuando hace scroll */
+  align-self: flex-start; 
+  position: sticky; 
+  top: 20px; 
 }
 
 .filtros-panel h2 {
@@ -89,10 +89,10 @@
   font-weight: bold;
 }
 
-/* Contenedor de resultados */
+
 .results-container {
-  flex: 1; /* Toma el espacio restante */
-  overflow: hidden; /* Evita desbordamiento */
+  flex: 1; 
+  overflow: hidden; 
 }
 
 /* Tabla de resultados */
@@ -114,7 +114,7 @@
   border-bottom: 1px solid #ddd;
 }
 
-/* Alternado (opcional usando nth-child) */
+
 .historial-table tbody tr:nth-child(even) {
   background-color: #f2f2f2;
 }
@@ -139,7 +139,7 @@
   background-color: #d50000;
 }
 
-/* Fila expandida */
+
 .expanded-row {
   background-color: #f9f9f9;
   padding: 15px;
@@ -151,5 +151,5 @@
   overflow: hidden;
   border-radius: 4px;
   border: 1px solid #ddd;
-  width: 100%; /* Asegura que ocupe todo el ancho disponible */
+  width: 100%; 
 }

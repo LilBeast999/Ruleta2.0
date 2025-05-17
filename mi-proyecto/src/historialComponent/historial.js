@@ -3,17 +3,14 @@ import React, { useState, useEffect } from 'react';
 import './historial.css';
 
 function Historial({ onBackToMenu }) {
-  // Estado para los filtros
   const [filtros, setFiltros] = useState({
     desde: '',
     hasta: '',
     grupo: ''
   });
 
-  // Estado para los resultados del historial
   const [historial, setHistorial] = useState([]);
 
-  // Llamada inicial sin filtros (opcional)
   useEffect(() => {
     fetch('http://localhost:5000/sorteos')  // Ajusta la URL según tu configuración
       .then(response => response.json())
@@ -32,14 +29,12 @@ function Historial({ onBackToMenu }) {
     });
   };
 
-  // Función modificada para buscar usando los 3 filtros
   const handleBuscar = () => {
     // Si las fechas están vacías, se rellenan con la fecha actual en formato ISO
     let fechaInicio = filtros.desde.trim() !== "" ? filtros.desde : new Date().toISOString();
     let fechaTermino = filtros.hasta.trim() !== "" ? filtros.hasta : new Date().toISOString();
-    const grupo = filtros.grupo; // Puede quedar vacío
+    const grupo = filtros.grupo; 
 
-    // Validar formato básico (con Date.parse, por ejemplo)
     const isValidDate = (dateStr) => {
       const parsedDate = Date.parse(dateStr);
       return !isNaN(parsedDate);
@@ -52,7 +47,6 @@ function Historial({ onBackToMenu }) {
       fechaTermino = new Date().toISOString();
     }
 
-    // Construir la URL con query params codificados
     const url = `http://localhost:5000/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
 
     fetch(url)
@@ -69,7 +63,6 @@ function Historial({ onBackToMenu }) {
       .catch(error => console.error("Error al buscar sorteos:", error));
   };
 
-  // Función para expandir/contraer detalles
   const toggleExpand = (id) => {
     setHistorial(historial.map(item => 
       item.id === id ? { ...item, expandido: !item.expandido } : item
@@ -146,7 +139,6 @@ function Historial({ onBackToMenu }) {
                     </td>
                     <td>
                       {item.alumno ? (
-                        // Se muestran los datos del alumno. Ajusta los campos según tu modelo.
                         `${item.alumno.nombre || ''} ${item.alumno.apellido || ''}`
                       ) : (
                         "Sin alumno"
