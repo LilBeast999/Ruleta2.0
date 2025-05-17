@@ -1,100 +1,101 @@
 // src/App.js
 import React, { useState } from 'react';
-import Ruleta from './Ruleta';
 import Login from './Login';
-import './App.css';
-import logo from './logo.png'; 
 import Menu from './Menu';
+import Ruleta from './Ruleta';
+import RuletaIncidencias from './RuletaIncidencias';
+import './App.css';
+import logo from './logo.png';
 
 function App() {
-  // Estado para el login
   const [user, setUser] = useState(null);
-
-  // Estado “crudo”: el contenido del textarea
+  const [currentView, setCurrentView] = useState('login'); // 'login' | 'menu' | 'ruleta-estandar' | 'incidencias'
+  
   const defaultInput = ['Titulo1', 'Titulo2', 'Titulo3', 'Titulo4'].join('\n');
   const [rawInput, setRawInput] = useState(defaultInput);
-  const [currentView, setCurrentView] = useState('login'); // 'login' | 'menu' | 'ruleta'
-
-
-  // Derivamos el array de títulos a partir de las líneas no vacías
-  const titulos = rawInput
+  const titulosEstandar = rawInput
     .split('\n')
     .map(line => line.trim())
     .filter(line => line !== '');
 
-  // Si el usuario no está autenticado, mostramos el Login
+  // 1) Pantalla de login
   if (!user) {
-     return <Login onLogin={(rut) => { setUser(rut); setCurrentView('menu'); }} />;
+    return (
+      <Login
+        onLogin={(rut) => {
+          setUser(rut);
+          setCurrentView('menu');
+        }}
+      />
+    );
   }
 
+  // 2) Menú principal
   if (currentView === 'menu') {
-  return <Menu onCreateRuleta={() => setCurrentView('ruleta')} />;
-}
+    return (
+      <Menu
+        onCreateRuleta={() => setCurrentView('ruleta-estandar')}
+        onShowRuleta={() => setCurrentView('incidencias')}
+      />
+    );
+  }
 
-if (currentView === 'ruleta') {
-  return (
-    <div className="App">
-      <header className="header">
-        <div className="header-logo">
-          <img src={logo} alt="Logo Universidad" />
-        </div>
-        <h1 className="header-title">La Ruleta de Incidencias</h1>
-        <div className="header-button">
-          <button onClick={() => setCurrentView('menu')}>Volver al menú</button>
-        </div>
-      </header>
+  // 3) Ruleta estándar
+  if (currentView === 'ruleta-estandar') {
+    return (
+      <div className="App">
+        <header className="header">
+          <div className="header-logo">
+            <img src={logo} alt="Logo Universidad" />
+          </div>
+          <h1 className="header-title">Ruleta Estándar</h1>
+          <div className="header-button">
+            <button onClick={() => setCurrentView('menu')}>
+              Volver al menú
+            </button>
+          </div>
+        </header>
+        <main className="content">
+          <section className="ruleta-section">
+            <Ruleta titulos={titulosEstandar} />
+          </section>
+          <section className="titulos-section">
+            <h2>Títulos para la Ruleta</h2>
+            <textarea
+              className="titulos-textarea"
+              value={rawInput}
+              onChange={e => setRawInput(e.target.value)}
+              placeholder="Escribe cada opción en una línea"
+            />
+          </section>
+        </main>
+      </div>
+    );
+  }
 
-      <main className="content">
-        <section className="ruleta-section">
-          <Ruleta titulos={titulos} />
-        </section>
+  // 4) Ruleta de incidencias
+  if (currentView === 'incidencias') {
+    return (
+      <div className="App">
+        <header className="header">
+          <div className="header-logo">
+            <img src={logo} alt="Logo Universidad" />
+          </div>
+          <h1 className="header-title">La Ruleta de Incidencias</h1>
+          <div className="header-button">
+            <button onClick={() => setCurrentView('menu')}>
+              Volver al menú
+            </button>
+          </div>
+        </header>
+        <main className="content">
+          <RuletaIncidencias />
+        </main>
+      </div>
+    );
+  }
 
-        <section className="titulos-section">
-          <h2>Títulos para la Ruleta</h2>
-          <textarea
-            className="titulos-textarea"
-            value={rawInput}
-            onChange={e => setRawInput(e.target.value)}
-            placeholder="Escribe cada opción en una línea"
-          />
-        </section>
-      </main>
-    </div>
-  );
-}
-
-
-  return (
-    <div className="App">
-      {/* CABECERA */}
-      <header className="header">
-        <div className="header-logo">
-          <img src={logo} alt="Logo Universidad" />
-        </div>
-        <h1 className="header-title">La Ruleta de Incidencias</h1>
-        <div className="header-button">
-          <button>Volver al menú</button>
-        </div>
-      </header>
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="content">
-        <section className="ruleta-section">
-          <Ruleta titulos={titulos} />
-        </section>
-
-        <section className="titulos-section">
-          <h2>Títulos para la Ruleta</h2>
-          <textarea
-            className="titulos-textarea"
-            value={rawInput}
-            onChange={e => setRawInput(e.target.value)}
-            placeholder="Escribe cada opción en una línea"
-          />
-        </section>
-      </main>
-    </div>
-  );
+  return null;
 }
 
 export default App;

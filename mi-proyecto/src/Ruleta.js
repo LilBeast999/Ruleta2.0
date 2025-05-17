@@ -9,7 +9,7 @@ export default function Ruleta({ titulos = [] }) {
 
   const size = 500;
   const center = size / 2;
-  const radius = center - 8;      // espacio para el borde
+  const radius = center - 8;      
   const n = titulos.length;
   const slice = 360 / (n || 1);
 
@@ -18,7 +18,7 @@ export default function Ruleta({ titulos = [] }) {
     '#42d4f4','#4363d8','#f032e6','#a9a9a9'
   ];
 
-  // Dibuja segmentos y texto
+  // segmentos y texto
   const draw = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
@@ -65,26 +65,19 @@ export default function Ruleta({ titulos = [] }) {
     setSpinning(true);
     setGanador(null);
 
-    // Elegimos un índice al azar
     const indiceGanador = Math.floor(Math.random() * n);
-
-    // Calculamos el centro de ese segmento
     const centroSegmento = indiceGanador * slice + slice / 2;
-
-    // Generamos las vueltas
     const vueltasCompletas = Math.floor(Math.random() * 10) + 3; // 3 a 12 vueltas
     const finalAngle = vueltasCompletas * 360 - centroSegmento;
 
     setSpinAngle(finalAngle);
 
-    // Tras la animación, mostramos el ganador
     setTimeout(() => {
       setSpinning(false);
       setGanador(titulos[indiceGanador]);
     }, 4000);
   };
 
-  // Estilos (tomados de la segunda ruleta)
   const styles = {
     container: {
       textAlign: 'center',
@@ -150,10 +143,7 @@ export default function Ruleta({ titulos = [] }) {
   return (
     <div style={styles.container}>
       <div style={styles.wheelContainer}>
-        {/* Flecha indicadora */}
         <div style={styles.pointer} />
-
-        {/* Ruleta giratoria */}
         <div style={styles.wheel}>
           <canvas
             ref={canvasRef}

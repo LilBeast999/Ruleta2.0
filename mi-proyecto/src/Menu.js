@@ -1,7 +1,8 @@
 // src/Menu.js
 import React from 'react';
 
-export default function Menu({ onCreateRuleta }) {
+export default function Menu({ onCreateRuleta, onShowRuleta }) {
+
   const styles = {
     container: {
       fontFamily: 'Arial, sans-serif',
@@ -74,8 +75,14 @@ export default function Menu({ onCreateRuleta }) {
       </div>
 
       <div style={styles.buttonContainer}>
-        <button style={styles.button} onClick={onCreateRuleta}>Crear Ruleta Estándar</button>
-        <button style={styles.button}>Girar Ruleta</button>
+        <button style={styles.button} onClick={onCreateRuleta}>
+          Crear Ruleta Estándar
+        </button>
+
+        <button style={styles.button} onClick={onShowRuleta}>
+          Girar Ruleta
+        </button>
+
         <button style={styles.button}>Subir Excel de datos</button>
         <button style={styles.button}>Historial de Ruletas</button>
       </div>
