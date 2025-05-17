@@ -7,7 +7,7 @@ class Sorteo(db.Model):
     fecha = db.Column(db.DateTime, nullable=False)
     id_profesor = db.Column(db.Integer, db.ForeignKey('profesor.id'), nullable=False)
     id_incidencia = db.Column(db.Integer, db.ForeignKey('incidencia.id'), nullable=False)
-    id_alumno = db.Column(db.Integer, db.ForeignKey('alumno.id'), nullable=False)
+    id_alumno = db.Column(db.Integer, db.ForeignKey('alumno.id'), nullable=True)
 
     grupo = db.relationship('Grupo', backref='sorteos')
     profesor = db.relationship('Profesor', backref='sorteos')
