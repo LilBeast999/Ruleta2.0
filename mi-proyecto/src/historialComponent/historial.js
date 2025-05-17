@@ -1,5 +1,5 @@
 // src/historial.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './historial.css';
 
 function Historial({ onBackToMenu }) {
@@ -11,27 +11,18 @@ function Historial({ onBackToMenu }) {
   });
 
   // Estado para los resultados del historial
-  const [historial, setHistorial] = useState([
-    {
-      id: 1,
-      grupo: 'Grupo 1',
-      tipoIncidente: 'Organizacional',
-      incidente: 'Problemas en la coordinacion',
-      fecha: '24/12/2025',
-      comentario: 'un integrante del equipo saboteara de alguna forma (commits erroneos, o dando ideas que causen conflicto)',
-      expandido: true
-    },
-    {
-      id: 2,
-      grupo: 'Grupo 2',
-      tipoIncidente: 'Administrativo',
-      incidente: 'Horario cambiado',
-      fecha: '17/12/2025',
-      comentario: 'el nuevo horario de reuniones sera los viernes a las 15:00',
-      expandido: false
-    }
-  ]);
+  const [historial, setHistorial] = useState([]);
 
+  // Llamada inicial sin filtros (opcional)
+  useEffect(() => {
+    fetch('http://localhost:5000/sorteos')  // Ajusta la URL según tu configuración
+      .then(response => response.json())
+      .then(data => {
+        setHistorial(data);
+        console.log("Sorteos obtenidos:", data);
+      })
+      .catch(error => console.error("Error al obtener sorteos:", error));
+  }, []);
 
   const handleFiltroChange = (e) => {
     const { name, value } = e.target;
@@ -41,10 +32,41 @@ function Historial({ onBackToMenu }) {
     });
   };
 
-
+  // Función modificada para buscar usando los 3 filtros
   const handleBuscar = () => {
-    console.log('Buscando con filtros:', filtros);
-    // Aquí se puede agregar la llamada al servidor
+    // Si las fechas están vacías, se rellenan con la fecha actual en formato ISO
+    let fechaInicio = filtros.desde.trim() !== "" ? filtros.desde : new Date().toISOString();
+    let fechaTermino = filtros.hasta.trim() !== "" ? filtros.hasta : new Date().toISOString();
+    const grupo = filtros.grupo; // Puede quedar vacío
+
+    // Validar formato básico (con Date.parse, por ejemplo)
+    const isValidDate = (dateStr) => {
+      const parsedDate = Date.parse(dateStr);
+      return !isNaN(parsedDate);
+    };
+
+    if (!isValidDate(fechaInicio)) {
+      fechaInicio = new Date().toISOString();
+    }
+    if (!isValidDate(fechaTermino)) {
+      fechaTermino = new Date().toISOString();
+    }
+
+    // Construir la URL con query params codificados
+    const url = `http://localhost:5000/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
+
+    fetch(url)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error("Error en la respuesta del servidor");
+        }
+        return response.json();
+      })
+      .then(data => {
+        setHistorial(data);
+        console.log("Sorteos encontrados:", data);
+      })
+      .catch(error => console.error("Error al buscar sorteos:", error));
   };
 
   // Función para expandir/contraer detalles
@@ -56,7 +78,6 @@ function Historial({ onBackToMenu }) {
 
   return (
     <div className="historial-container">
-
       {/* Contenido Principal */}
       <div className="historial-content">
         {/* Panel de Filtros */}
@@ -65,10 +86,9 @@ function Historial({ onBackToMenu }) {
           <div>
             <label htmlFor="desde">Desde</label>
             <input
-              type="text"
+              type="date"
               id="desde"
               name="desde"
-              placeholder="dd/mm/aa"
               value={filtros.desde}
               onChange={handleFiltroChange}
             />
@@ -76,10 +96,9 @@ function Historial({ onBackToMenu }) {
           <div>
             <label htmlFor="hasta">Hasta</label>
             <input
-              type="text"
+              type="date"
               id="hasta"
               name="hasta"
-              placeholder="dd/mm/aa"
               value={filtros.hasta}
               onChange={handleFiltroChange}
             />
@@ -108,6 +127,7 @@ function Historial({ onBackToMenu }) {
                 <th>Incidente</th>
                 <th>Fecha</th>
                 <th>Comentario</th>
+                <th>Alumno</th>
                 <th></th>
               </tr>
             </thead>
@@ -124,6 +144,14 @@ function Historial({ onBackToMenu }) {
                         ? `${item.comentario.substring(0, 30)}...`
                         : item.comentario}
                     </td>
+                    <td>
+                      {item.alumno ? (
+                        // Se muestran los datos del alumno. Ajusta los campos según tu modelo.
+                        `${item.alumno.nombre || ''} ${item.alumno.apellido || ''}`
+                      ) : (
+                        "Sin alumno"
+                      )}
+                    </td>
                     <td style={{ textAlign: 'center' }}>
                       <button
                         onClick={() => toggleExpand(item.id)}
@@ -135,13 +163,18 @@ function Historial({ onBackToMenu }) {
                   </tr>
                   {item.expandido && (
                     <tr className="expanded-row">
-                      <td colSpan="6">
+                      <td colSpan="7">
                         <div>
                           <p><strong>Grupo:</strong> {item.grupo}</p>
                           <p><strong>Tipo Incidente:</strong> {item.tipoIncidente}</p>
                           <p><strong>Incidente:</strong> {item.incidente}</p>
                           <p><strong>Fecha:</strong> {item.fecha}</p>
                           <p><strong>Comentario:</strong> {item.comentario}</p>
+                          {item.alumno && (
+                            <p>
+                              <strong>Alumno:</strong> {item.alumno.nombre || ''} {item.alumno.apellido || ''}
+                            </p>
+                          )}
                         </div>
                       </td>
                     </tr>

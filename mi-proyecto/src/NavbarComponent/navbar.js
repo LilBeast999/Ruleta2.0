@@ -1,5 +1,5 @@
 import React from 'react';
-import logo from '../logo.png'; // Ajusta la ruta si es necesario
+import logo from '../logo.png';
 import './navbar.css';
 
 function Navbar({ title, onBack }) {

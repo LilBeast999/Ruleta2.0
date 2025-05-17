@@ -46,11 +46,17 @@
 }
 
 .filtros-panel {
-  flex: 0 0 250px;
+  flex: 0 0 250px; /* Esto fija el tamaño del panel de filtros */
+  min-width: 250px; /* Asegura que no se encoja */
+  max-width: 250px; /* Asegura que no se expanda */
+  height: fit-content; /* Para que no se estire verticalmente */
   padding: 15px;
   border-radius: 5px;
   border: 1px solid #ddd;
   background-color: #f9f9f9;
+  align-self: flex-start; /* Lo mantiene en la parte superior */
+  position: sticky; /* Opcional: lo mantiene visible al hacer scroll */
+  top: 20px; /* Opcional: distancia desde la parte superior cuando hace scroll */
 }
 
 .filtros-panel h2 {
@@ -83,18 +89,22 @@
   font-weight: bold;
 }
 
+/* Contenedor de resultados */
+.results-container {
+  flex: 1; /* Toma el espacio restante */
+  overflow: hidden; /* Evita desbordamiento */
+}
+
 /* Tabla de resultados */
 .historial-table {
   width: 100%;
   border-collapse: collapse;
   border: 0px solid #ddd;
-
 }
 
 .historial-table thead tr {
   background-color: #d50000;
   color: #fff;
-
 }
 
 .historial-table th,
@@ -136,9 +146,10 @@
   border-bottom: 1px solid #ddd;
 }
 
-/* Agrega esta nueva clase al final de historial.css */
+/* Contenedor de la tabla */
 .table-container {
   overflow: hidden;
-  border-radius: 4px; /* mismo valor que se usa en otros componentes (por ej. 4px en App.css) */
+  border-radius: 4px;
   border: 1px solid #ddd;
+  width: 100%; /* Asegura que ocupe todo el ancho disponible */
 }
