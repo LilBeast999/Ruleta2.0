@@ -1,0 +1,47 @@
+.menu-container {
+  font-family: 'Arial, sans-serif';
+  text-align: center;
+  padding: 40px;
+}
+
+.menu-title {
+  font-size: 32px;
+  font-weight: bold;
+}
+
+.menu-user-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.menu-user-name {
+  font-size: 14px;
+}
+
+.menu-user-icon {
+  width: 32px;
+  height: 32px;
+  background-color: #000;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.menu-button-container {
+  margin-top: 50px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.menu-button {
+  background-color: #c00;
+  color: #fff;
+  border: none;
+  padding: 45px 20px;
+  font-size: 21px;
+  border-radius: 5px;
+  cursor: pointer;
+  width: 300px;
+}
