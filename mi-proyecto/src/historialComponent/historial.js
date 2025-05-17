@@ -156,7 +156,11 @@ function Historial({ onBackToMenu }) {
                           <p><strong>Incidente:</strong> {item.incidente}</p>
                           <p><strong>Fecha:</strong> {item.fecha}</p>
                           <p><strong>Comentario:</strong> {item.comentario}</p>
-                          <p><strong>Individual:</strong> {item.alumno ? "Si" : "No"}</p>
+                          {item.alumno && (
+                            <p>
+                              <strong>Alumno:</strong> {item.alumno.nombre} {item.alumno.apellido}
+                            </p>
+                          )}
                         </div>
                       </td>
                     </tr>
