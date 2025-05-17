@@ -30,7 +30,28 @@ function Historial({ onBackToMenu }) {
   };
 
   const handleBuscar = () => {
-    // Si las fechas están vacías, se rellenan con la fecha actual en formato ISO
+    // Si no hay filtros (todos vacíos), se hace la misma llamada que al cargar la página.
+    if (
+      filtros.desde.trim() === "" &&
+      filtros.hasta.trim() === "" &&
+      filtros.grupo.trim() === ""
+    ) {
+      fetch('http://localhost:5000/sorteos')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Error en la respuesta del servidor");
+          }
+          return response.json();
+        })
+        .then(data => {
+          setHistorial(data);
+          console.log("Sorteos encontrados:", data);
+        })
+        .catch(error => console.error("Error al buscar sorteos:", error));
+      return;
+    }
+
+    // Si hay algún filtro ingresado, se asignan las fechas; en caso de estar vacías se usa la fecha actual.
     let fechaInicio = filtros.desde.trim() !== "" ? filtros.desde : new Date().toISOString();
     let fechaTermino = filtros.hasta.trim() !== "" ? filtros.hasta : new Date().toISOString();
     const grupo = filtros.grupo; 
@@ -47,6 +68,7 @@ function Historial({ onBackToMenu }) {
       fechaTermino = new Date().toISOString();
     }
 
+    // Se construye la URL con los parámetros filtrados.
     const url = `http://localhost:5000/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
 
     fetch(url)
