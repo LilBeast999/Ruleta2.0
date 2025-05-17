@@ -1,0 +1,155 @@
+.historial-container {
+  font-family: Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.historial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 10px;
+}
+
+.historial-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.historial-logo {
+  height: 90px;
+  margin-right: 20px;
+}
+
+.historial-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.historial-back-button {
+  background-color: #d50000;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.historial-content {
+  display: flex;
+  gap: 20px;
+}
+
+.filtros-panel {
+  flex: 0 0 250px; /* Esto fija el tamaño del panel de filtros */
+  min-width: 250px; /* Asegura que no se encoja */
+  max-width: 250px; /* Asegura que no se expanda */
+  height: fit-content; /* Para que no se estire verticalmente */
+  padding: 15px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  background-color: #f9f9f9;
+  align-self: flex-start; /* Lo mantiene en la parte superior */
+  position: sticky; /* Opcional: lo mantiene visible al hacer scroll */
+  top: 20px; /* Opcional: distancia desde la parte superior cuando hace scroll */
+}
+
+.filtros-panel h2 {
+  margin: 0 0 15px 0;
+  font-size: 1.5rem;
+}
+
+.filtros-panel label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.filtros-panel input {
+  width: 93%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-bottom: 15px;
+}
+
+.filtros-panel button {
+  width: 100%;
+  padding: 10px;
+  background-color: #d50000;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Contenedor de resultados */
+.results-container {
+  flex: 1; /* Toma el espacio restante */
+  overflow: hidden; /* Evita desbordamiento */
+}
+
+/* Tabla de resultados */
+.historial-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 0px solid #ddd;
+}
+
+.historial-table thead tr {
+  background-color: #d50000;
+  color: #fff;
+}
+
+.historial-table th,
+.historial-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Alternado (opcional usando nth-child) */
+.historial-table tbody tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+/* Botón para expandir/contraer */
+.expand-button {
+  background-color: #4caf50;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.expand-button.expanded {
+  background-color: #d50000;
+}
+
+/* Fila expandida */
+.expanded-row {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+}
+
+/* Contenedor de la tabla */
+.table-container {
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  width: 100%; /* Asegura que ocupe todo el ancho disponible */
+}
