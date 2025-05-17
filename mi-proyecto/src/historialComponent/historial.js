@@ -120,7 +120,7 @@ function Historial({ onBackToMenu }) {
                 <th>Incidente</th>
                 <th>Fecha</th>
                 <th>Comentario</th>
-                <th>Alumno</th>
+                <th>Individual</th>
                 <th></th>
               </tr>
             </thead>
@@ -137,13 +137,7 @@ function Historial({ onBackToMenu }) {
                         ? `${item.comentario.substring(0, 30)}...`
                         : item.comentario}
                     </td>
-                    <td>
-                      {item.alumno ? (
-                        `${item.alumno.nombre || ''} ${item.alumno.apellido || ''}`
-                      ) : (
-                        "Sin alumno"
-                      )}
-                    </td>
+                    <td>{item.alumno ? "Si" : "No"}</td>
                     <td style={{ textAlign: 'center' }}>
                       <button
                         onClick={() => toggleExpand(item.id)}
@@ -162,11 +156,7 @@ function Historial({ onBackToMenu }) {
                           <p><strong>Incidente:</strong> {item.incidente}</p>
                           <p><strong>Fecha:</strong> {item.fecha}</p>
                           <p><strong>Comentario:</strong> {item.comentario}</p>
-                          {item.alumno && (
-                            <p>
-                              <strong>Alumno:</strong> {item.alumno.nombre || ''} {item.alumno.apellido || ''}
-                            </p>
-                          )}
+                          <p><strong>Individual:</strong> {item.alumno ? "Si" : "No"}</p>
                         </div>
                       </td>
                     </tr>
