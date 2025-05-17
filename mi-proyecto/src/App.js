@@ -1,98 +1,66 @@
 // src/App.js
 import React, { useState } from 'react';
 import Ruleta from './Ruleta';
-import Login from './Login';
+import Menu from './menuComponent/Menu';
+import Historial from './historialComponent/historial';
+import Navbar from './NavbarComponent/navbar';
 import './App.css';
-import logo from './logo.png'; 
-import Menu from './Menu';
 
 function App() {
-  // Estado para el login
-  const [user, setUser] = useState(null);
-
-  // Estado “crudo”: el contenido del textarea
   const defaultInput = ['Titulo1', 'Titulo2', 'Titulo3', 'Titulo4'].join('\n');
   const [rawInput, setRawInput] = useState(defaultInput);
-  const [currentView, setCurrentView] = useState('login'); // 'login' | 'menu' | 'ruleta'
+  const [currentView, setCurrentView] = useState('menu');
 
-
-  // Derivamos el array de títulos a partir de las líneas no vacías
   const titulos = rawInput
     .split('\n')
     .map(line => line.trim())
     .filter(line => line !== '');
 
-  // Si el usuario no está autenticado, mostramos el Login
-  if (!user) {
-     return <Login onLogin={(rut) => { setUser(rut); setCurrentView('menu'); }} />;
+  let title = "";
+  if (currentView === 'menu') {
+    title = "Ruleta de Incidencias";
+  } else if (currentView === 'ruleta') {
+    title = "La Ruleta de Incidencias";
+  } else if (currentView === 'historial') {
+    title = "Historial de Sorteos";
   }
 
-  if (currentView === 'menu') {
-  return <Menu onCreateRuleta={() => setCurrentView('ruleta')} />;
-}
-
-if (currentView === 'ruleta') {
   return (
     <div className="App">
-      <header className="header">
-        <div className="header-logo">
-          <img src={logo} alt="Logo Universidad" />
-        </div>
-        <h1 className="header-title">La Ruleta de Incidencias</h1>
-        <div className="header-button">
-          <button onClick={() => setCurrentView('menu')}>Volver al menú</button>
-        </div>
-      </header>
+      {/* Se muestra la Navbar en todas las vistas */}
+      <Navbar 
+        title={title} 
+        onBack={currentView !== 'menu' ? () => setCurrentView('menu') : null}
+      />
 
-      <main className="content">
-        <section className="ruleta-section">
-          <Ruleta titulos={titulos} />
-        </section>
+      {/* Renderizado variable según la vista */}
+      {currentView === 'menu' && (
+        <Menu 
+          onCreateRuleta={() => setCurrentView('ruleta')}
+          onHistorial={() => setCurrentView('historial')}
+        />
+      )}
 
-        <section className="titulos-section">
-          <h2>Títulos para la Ruleta</h2>
-          <textarea
-            className="titulos-textarea"
-            value={rawInput}
-            onChange={e => setRawInput(e.target.value)}
-            placeholder="Escribe cada opción en una línea"
-          />
-        </section>
-      </main>
-    </div>
-  );
-}
+      {currentView === 'ruleta' && (
+        <main className="content">
+          <section className="ruleta-section">
+            <Ruleta titulos={titulos} />
+          </section>
+          <section className="titulos-section">
+            <h2>Títulos para la Ruleta</h2>
+            <textarea
+              className="titulos-textarea"
+              value={rawInput}
+              onChange={e => setRawInput(e.target.value)}
+              placeholder="Escribe cada opción en una línea"
+            />
+          </section>
+        </main>
+      )}
 
-
-  return (
-    <div className="App">
-      {/* CABECERA */}
-      <header className="header">
-        <div className="header-logo">
-          <img src={logo} alt="Logo Universidad" />
-        </div>
-        <h1 className="header-title">La Ruleta de Incidencias</h1>
-        <div className="header-button">
-          <button>Volver al menú</button>
-        </div>
-      </header>
-
-      {/* CONTENIDO PRINCIPAL */}
-      <main className="content">
-        <section className="ruleta-section">
-          <Ruleta titulos={titulos} />
-        </section>
-
-        <section className="titulos-section">
-          <h2>Títulos para la Ruleta</h2>
-          <textarea
-            className="titulos-textarea"
-            value={rawInput}
-            onChange={e => setRawInput(e.target.value)}
-            placeholder="Escribe cada opción en una línea"
-          />
-        </section>
-      </main>
+      {currentView === 'historial' && (
+        <Historial onBackToMenu={() => setCurrentView('menu')} />
+      )}
     </div>
   );
 }
