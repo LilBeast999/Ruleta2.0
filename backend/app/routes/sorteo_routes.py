@@ -19,8 +19,12 @@ def crear_sorteo():
     id_profesor = data.get('id_profesor')
     id_incidencia = data.get('id_incidencia')
     id_alumno = data.get('id_alumno')
-
-    if not all([id_grupo, fecha_str, id_profesor, id_incidencia, id_alumno]):
+    
+    # Datos opcionales para el comentario
+    comentario_desc = data.get('comentario')
+    comentario_fecha_str = data.get('comentario_fecha')
+    
+    if not all([id_grupo, fecha_str, id_profesor, id_incidencia]):
         return jsonify({"error": "Faltan datos obligatorios"}), 400
 
     try:
@@ -33,6 +37,24 @@ def crear_sorteo():
             id_alumno=id_alumno
         )
         db.session.add(nuevo_sorteo)
+        # Hacemos flush para obtener el id asignado al sorteo sin confirmarlo aún
+        db.session.flush()
+
+        # Si se envía información de comentario, se crea el registro asociado.
+        if comentario_desc and comentario_fecha_str:
+            try:
+                comentario_fecha = datetime.fromisoformat(comentario_fecha_str)
+            except Exception as e:
+                db.session.rollback()
+                return jsonify({"error": f"Formato de comentario_fecha inválido: {e}"}), 400
+            
+            nuevo_comentario = Comentario(
+                descripcion=comentario_desc,
+                fecha=comentario_fecha,
+                id_sorteo=nuevo_sorteo.id
+            )
+            db.session.add(nuevo_comentario)
+
         db.session.commit()
         return jsonify({"message": "Sorteo creado exitosamente"}), 201
     except Exception as e:
