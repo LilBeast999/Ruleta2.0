@@ -11,9 +11,9 @@ export default function RuletaIncidencias() {
   const [fase, setFase] = useState(0);
 
   const [grupoSel, setGrupoSel] = useState(null);
-  const [catSel,    setCatSel]   = useState(null);
-  const [incSel,    setIncSel]   = useState(null);
-  const [mbrSel,    setMbrSel]   = useState(null);
+  const [catSel, setCatSel]     = useState(null);
+  const [incSel, setIncSel]     = useState(null);
+  const [mbrSel, setMbrSel]     = useState(null);
 
   const [individual, setIndividual] = useState(false);
   const [comentario, setComentario] = useState('');
@@ -54,48 +54,44 @@ export default function RuletaIncidencias() {
     }
   }, [fase, catSel]);
 
-  // 4) cargar miembros si se activa individual tras fase 2
-useEffect(() => {
-  if (individual && grupoSel) {
-    fetch(`http://localhost:5000/grupo/${grupoSel.id}`)
-      .then(r => r.json())
-      .then(data => {
-        console.log('Datos recibidos de /grupo/:id →', data);
-        if (Array.isArray(data.alumnos)) {
-          setMiembros(data.alumnos);
-          // una vez cargados, ya podemos pasar a fase 3
-          setFase(3);
-        } else {
-          console.warn('❗ La respuesta no contiene campo alumnos:', data);
+  // 4) cargar miembros si individual + fase 2
+  useEffect(() => {
+    if (fase === 2 && individual && grupoSel) {
+      fetch(`http://localhost:5000/grupo/${grupoSel.id}`)
+        .then(r => r.json())
+        .then(data => {
+          console.log('Datos recibidos de /grupo/:id →', data);
+          if (Array.isArray(data.alumnos)) {
+            setMiembros(data.alumnos);
+            setFase(3);
+          } else {
+            console.warn('❗ La respuesta no contiene campo alumnos:', data);
+            setMiembros([]);
+          }
+        })
+        .catch(err => {
+          console.error('Error en fetch grupo:', err);
           setMiembros([]);
-        }
-      })
-      .catch(err => {
-        console.error('Error en fetch grupo:', err);
-        setMiembros([]);
-      });
-  } else {
-    // si desactiva individual o cambia de grupo/incidencia, limpiamos
-    setMiembros([]);
-    setMbrSel(null);
-    if (!individual && fase === 3) {
-      // si venías de fase 3 y desactivas individual, volvemos a fase 2
+        });
+    } else if (fase === 3 && !individual) {
+      // si desactivas individual, volvemos a fase 2
       setFase(2);
+      setMiembros([]);
+      setMbrSel(null);
     }
-  }
-}, [individual, grupoSel]);
+  }, [individual, fase, grupoSel]);
 
-  // Wheel genérico
+  // Componente Wheel reutilizable
   function Wheel({ titulos = [], onDone }) {
     const canvasRef = useRef(null);
     const [spinAngle, setSpinAngle] = useState(0);
     const [spinning, setSpinning]   = useState(false);
 
     const size   = 500;
-    const center = size/2;
+    const center = size / 2;
     const radius = center - 8;
     const n      = titulos.length;
-    const slice  = 360/(n||1);
+    const slice  = 360 / (n || 1);
     const colors = useMemo(() => [
       '#e6194b','#f58231','#ffe119','#3cb44b','#42d4f4','#4363d8'
     ], []);
@@ -106,23 +102,24 @@ useEffect(() => {
       const ctx = c.getContext('2d');
       ctx.clearRect(0,0,size,size);
       for (let i = 0; i < n; i++) {
-        const start = i*slice*Math.PI/180;
-        const end   = (i+1)*slice*Math.PI/180;
+        const start = i * slice * Math.PI/180;
+        const end   = (i+1) * slice * Math.PI/180;
         ctx.beginPath();
         ctx.moveTo(center,center);
         ctx.arc(center,center,radius,start,end);
         ctx.closePath();
-        ctx.fillStyle = colors[i%colors.length];
+        ctx.fillStyle = colors[i % colors.length];
         ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-        const mid = (start+end)/2;
+        // texto
+        const mid = (start + end) / 2;
         ctx.save();
         ctx.translate(center,center);
         ctx.rotate(mid);
         ctx.fillStyle = '#fff';
         ctx.font = 'bold 16px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText(titulos[i]||'', radius*0.6, 8);
+        ctx.fillText(titulos[i] || '', radius * 0.6, 8);
         ctx.restore();
       }
     }, [titulos, slice, center, radius, colors, n]);
@@ -136,10 +133,10 @@ useEffect(() => {
     const spin = () => {
       if (spinning || n === 0) return;
       setSpinning(true);
-      const idx = Math.floor(Math.random()*n);
-      const mid = idx*slice + slice/2;
-      const vueltas = Math.floor(Math.random()*6)+3;
-      const finalA = vueltas*360 - mid;
+      const idx = Math.floor(Math.random() * n);
+      const mid = idx * slice + slice/2;
+      const vueltas = Math.floor(Math.random()*6) + 3;
+      const finalA = vueltas * 360 - mid;
       setSpinAngle(finalA);
       setTimeout(() => {
         setSpinning(false);
@@ -150,7 +147,7 @@ useEffect(() => {
     return (
       <div style={{ textAlign:'center', position:'relative', marginBottom:20 }}>
         <div style={{
-          width:size, height:size, borderRadius:'50%',
+          width: size, height: size, borderRadius:'50%',
           boxShadow:'0 0 10px rgba(0,0,0,0.3)',
           transform:`rotate(${spinAngle}deg)`,
           transition:'transform 3.5s ease-out'
@@ -173,33 +170,37 @@ useEffect(() => {
 
   // POST /sorteo
   const guardarSorteo = async () => {
+    const nowIso = new Date().toISOString();
     const payload = {
-      id_grupo: grupoSel.id,
-      fecha: new Date().toISOString(),
-      id_profesor: 4,
-      id_incidencia: incSel.id,
-      id_alumno: individual ? mbrSel.id : null
+      id_grupo:         grupoSel.id,
+      fecha:            nowIso,
+      id_profesor:      4,
+      id_incidencia:    incSel.id,
+      id_alumno:        individual ? mbrSel.id : null,
+      comentario:       comentario,
+      comentario_fecha: nowIso
     };
+
     try {
       const res = await fetch('http://localhost:5000/sorteo', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(payload)
+        method:  'POST',
+        headers: { 'Content-Type':'application/json' },
+        body:    JSON.stringify(payload)
       });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Error desconocido');
       }
-      alert('🎉 Sorteo guardado correctamente');
+      alert('🎉 Sorteo y comentario guardados correctamente');
     } catch (e) {
       console.error(e);
-      alert('⚠️ Error guardando: ' + e.message);
+      alert('⚠️ Error guardando sorteo/comentario: ' + e.message);
     }
   };
 
   return (
     <div style={{ display:'flex', gap:40, alignItems:'flex-start' }}>
-      {/* IZQUIERDA: rueda única */}
+      {/* Columna de Ruleta */}
       <div style={{ width:520, minHeight:540 }}>
         {fase === 0 && (
           <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
@@ -223,7 +224,7 @@ useEffect(() => {
             onDone={i=>{
               setIncSel(incidencias[i]);
               setMbrSel(null);
-              if(individual) setFase(3);
+              if (individual) setFase(3);
             }}
           />
         )}
@@ -235,7 +236,7 @@ useEffect(() => {
         )}
       </div>
 
-      {/* DERECHA: formulario y controles */}
+      {/* Columna de Controles */}
       <div style={{
         maxWidth:300,
         display:'flex',
@@ -245,9 +246,9 @@ useEffect(() => {
         {/* Grupo */}
         <label><strong>Grupo:</strong></label>
         <select
-          value={grupoSel?.id||''}
-          onChange={e=>{
-            const g = grupos.find(x=>x.id===+e.target.value);
+          value={grupoSel?.id || ''}
+          onChange={e => {
+            const g = grupos.find(x => x.id === +e.target.value);
             setGrupoSel(g);
             setCatSel(null);
             setIncSel(null);
@@ -258,7 +259,7 @@ useEffect(() => {
           style={{ fontSize:16, padding:8 }}
         >
           <option value="">— Selecciona un grupo —</option>
-          {grupos.map(g=>(
+          {grupos.map(g => (
             <option key={g.id} value={g.id}>{g.nombre}</option>
           ))}
         </select>
@@ -273,12 +274,11 @@ useEffect(() => {
         <input readOnly value={incSel?.descripcion||''}
           style={{ padding:8, fontSize:16 }} />
 
-        {/* Integrante seleccionado (solo individual) */}
+        {/* Integrante (solo individual) */}
         {individual && mbrSel && (
           <>
             <label><strong>Integrante seleccionado:</strong></label>
-            <input
-              readOnly
+            <input readOnly
               value={`${mbrSel.nombre} ${mbrSel.apellido}`}
               style={{ padding:8, fontSize:16 }}
             />
@@ -291,7 +291,7 @@ useEffect(() => {
           rows={3}
           value={comentario}
           disabled={!incSel}
-          onChange={e=>setComentario(e.target.value)}
+          onChange={e => setComentario(e.target.value)}
           style={{ padding:8, fontSize:16, resize:'none' }}
         />
 
@@ -305,12 +305,12 @@ useEffect(() => {
             onChange={e => {
               setIndividual(e.target.checked);
               if (!e.target.checked) {
-                // si desactiva, reseteamos selección de miembro
                 setMbrSel(null);
+                if (fase === 3) setFase(2);
               }
             }}
           />
-          <label style={{ marginLeft: 8 }}>Individual</label>
+          <label style={{ marginLeft:8 }}>Individual</label>
         </div>
 
         {/* Botón Guardar */}
@@ -321,5 +321,5 @@ useEffect(() => {
         )}
       </div>
     </div>
-);
+  );
 }
