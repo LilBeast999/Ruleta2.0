@@ -1,5 +1,6 @@
 // src/RuletaIncidencias.js
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import './RuletaIncidencias.css';
 
 export default function RuletaIncidencias() {
   const [grupos, setGrupos] = useState([]);
@@ -302,15 +303,21 @@ export default function RuletaIncidencias() {
         />
 
         {/* Switch Grupal/Individual */}
-        <div>
-          <label style={{marginRight:8}}>Grupal</label>
-          <input
-            type="checkbox"
-            checked={individual}
-            disabled={!incSel}
-            onChange={e=>{ setIndividual(e.target.checked); if(!e.target.checked && fase===3) setFase(2); }}
-          />
-          <label style={{marginLeft:8}}>Individual</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <label>Grupal</label>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={individual}
+              disabled={!incSel}
+              onChange={e => {
+                setIndividual(e.target.checked);
+                if (!e.target.checked && fase === 3) setFase(2);
+              }}
+            />
+            <span className="switch-slider"></span>
+          </label>
+          <label>Individual</label>
         </div>
 
         {/* Guardar */}
