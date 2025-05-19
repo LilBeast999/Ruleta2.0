@@ -115,7 +115,7 @@ def obtener_sorteos():
         for registro in registros:
             s, grupo, incidencia, categoria, comentario, alumno = registro
             comentario_texto = comentario.descripcion if comentario else ""
-            fecha_str = s.fecha.strftime("%d/%m/%Y")
+            fecha_str = s.fecha.isoformat()
             # Se agrega el alumno solo si existe
             alumno_data = {
                 "id": alumno.id,
