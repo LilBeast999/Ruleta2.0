@@ -15,8 +15,9 @@ function Historial({ onBackToMenu }) {
     fetch('http://localhost:5000/sorteos')  // Ajusta la URL según tu configuración
       .then(response => response.json())
       .then(data => {
-        setHistorial(data);
-        console.log("Sorteos obtenidos:", data);
+        const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        setHistorial(sortedData);
+        console.log("Sorteos obtenidos:", sortedData);
       })
       .catch(error => console.error("Error al obtener sorteos:", error));
   }, []);
@@ -30,7 +31,6 @@ function Historial({ onBackToMenu }) {
   };
 
   const handleBuscar = () => {
-    // Si no hay filtros (todos vacíos), se hace la misma llamada que al cargar la página.
     if (
       filtros.desde.trim() === "" &&
       filtros.hasta.trim() === "" &&
@@ -44,14 +44,14 @@ function Historial({ onBackToMenu }) {
           return response.json();
         })
         .then(data => {
-          setHistorial(data);
-          console.log("Sorteos encontrados:", data);
+          const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+          setHistorial(sortedData);
+          console.log("Sorteos encontrados:", sortedData);
         })
         .catch(error => console.error("Error al buscar sorteos:", error));
       return;
     }
 
-    // Si hay algún filtro ingresado, se asignan las fechas; en caso de estar vacías se usa la fecha actual.
     let fechaInicio = filtros.desde.trim() !== "" ? filtros.desde : new Date().toISOString();
     let fechaTermino = filtros.hasta.trim() !== "" ? filtros.hasta : new Date().toISOString();
     const grupo = filtros.grupo; 
@@ -68,7 +68,6 @@ function Historial({ onBackToMenu }) {
       fechaTermino = new Date().toISOString();
     }
 
-    // Se construye la URL con los parámetros filtrados.
     const url = `http://localhost:5000/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
 
     fetch(url)
@@ -79,8 +78,9 @@ function Historial({ onBackToMenu }) {
         return response.json();
       })
       .then(data => {
-        setHistorial(data);
-        console.log("Sorteos encontrados:", data);
+        const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+        setHistorial(sortedData);
+        console.log("Sorteos encontrados:", sortedData);
       })
       .catch(error => console.error("Error al buscar sorteos:", error));
   };
@@ -153,7 +153,7 @@ function Historial({ onBackToMenu }) {
                     <td>{item.grupo}</td>
                     <td>{item.tipoIncidente}</td>
                     <td>{item.incidente}</td>
-                    <td>{item.fecha}</td>
+                    <td>{new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                     <td>
                       {item.comentario.length > 30
                         ? `${item.comentario.substring(0, 30)}...`

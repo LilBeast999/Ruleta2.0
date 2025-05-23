@@ -183,7 +183,7 @@ export default function Ruleta({ defaultTitulos = [] }) {
 
         {ganador && (
           <div style={styles.winner}>
-            Resultado: <strong>{ganador}</strong>
+            Ganador: <strong>{ganador}</strong>
           </div>
         )}
       </div>
