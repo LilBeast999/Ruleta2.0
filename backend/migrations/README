@@ -15,3 +15,5 @@ Aplicar los cambios a la base de datos, ejecuta migracion
 flask db upgrade
 
 pip install pandas
+
+pip install openpyxl
