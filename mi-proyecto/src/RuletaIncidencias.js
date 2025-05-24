@@ -80,7 +80,7 @@ export default function RuletaIncidencias() {
   const pointerStyle = {
     position: 'absolute',
     top: '45%',
-    right: '-20px',
+    right: '0px',
     transform: 'translateY(-50%)',
     width: 0,
     height: 0,
@@ -174,18 +174,16 @@ export default function RuletaIncidencias() {
         </div>
 
         {/* Botón girar */}
-        <button
+        <button className="wheel-button" disabled={spinning}
           onClick={spin}
-          disabled={spinning}
           style={{
             ...botonEstilo,
             display: 'block',       // para que margin auto funcione
             margin: '20px auto 0'   // 20px arriba, centrado, 0 abajo
           }}
         >
-          <button className="wheel-button" disabled={spinning}>
-            {spinning ? 'Girando…' : 'Girar ruleta'}
-          </button>
+        {spinning ? 'Girando…' : 'Girar ruleta'}
+          
         </button>
       </div>
     );
