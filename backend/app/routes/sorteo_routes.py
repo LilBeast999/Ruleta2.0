@@ -4,7 +4,8 @@ from app.models.grupo import Grupo
 from app.models.incidencia import Incidencia
 from app.models.categoria import Categoria
 from app.models.comentario import Comentario
-from app.models.alumno import Alumno  # Asegúrate de tener este modelo
+from app.models.alumno import Alumno
+from app.models.profesor import Profesor  # asegúrate de importar el modelo
 from app import db
 from datetime import datetime
 
@@ -27,6 +28,19 @@ def crear_sorteo():
     if not all([id_grupo, fecha_str, id_profesor, id_incidencia]):
         return jsonify({"error": "Faltan datos obligatorios"}), 400
 
+    # validación: si no existe ningún profesor, crea uno dummy
+    if not Profesor.query.first():
+        dummy_profesor = Profesor(
+            rut="dummy",
+            password="dummy",
+            nombre="Dummy",
+            apellido="Professor",
+            codigo_recuperacion="dummy"
+        )
+        db.session.add(dummy_profesor)
+        db.session.flush()  # para asignar el id
+        id_profesor = dummy_profesor.id
+
     try:
         fecha = datetime.fromisoformat(fecha_str)
         nuevo_sorteo = Sorteo(
@@ -37,10 +51,9 @@ def crear_sorteo():
             id_alumno=id_alumno
         )
         db.session.add(nuevo_sorteo)
-        # Hacemos flush para obtener el id asignado al sorteo sin confirmarlo aún
-        db.session.flush()
+        db.session.flush()  # obtiene el id antes del commit
 
-        # Si se envía información de comentario, se crea el registro asociado.
+        # si se envía comentario, se crea su registro asociado
         if comentario_desc and comentario_fecha_str:
             try:
                 comentario_fecha = datetime.fromisoformat(comentario_fecha_str)
