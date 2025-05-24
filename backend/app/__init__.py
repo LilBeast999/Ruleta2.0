@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from dotenv import load_dotenv
 from sqlalchemy import text
 
+
 db = SQLAlchemy()
 migrate = Migrate()
 
@@ -48,6 +49,10 @@ def create_app():
     app.register_blueprint(incidencia_bp)
     from app.routes.sorteo_routes import sorteo_bp
     app.register_blueprint(sorteo_bp)
+    from app.routes.excel_routes import excel_bp
+    app.register_blueprint(excel_bp)
+    from app.routes.proyecto_routes import proyecto_bp
+    app.register_blueprint(proyecto_bp)
 
     @app.route('/')
     def home():

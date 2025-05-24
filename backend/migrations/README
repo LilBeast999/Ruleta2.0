@@ -13,3 +13,5 @@ flask db migrate -m "<nombre de los cambios>"
 
 Aplicar los cambios a la base de datos, ejecuta migracion
 flask db upgrade
+
+pip install pandas

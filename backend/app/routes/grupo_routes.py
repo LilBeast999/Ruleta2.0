@@ -33,3 +33,7 @@ def get_grupo_by_id(id):
             return jsonify({"error": "Grupo no encontrado"}), 404
     except Exception as e:
         return jsonify({"error": f"Error al obtener el grupo: {e}"}), 500
+    
+
+
+  
