@@ -28,18 +28,23 @@ def crear_sorteo():
     if not all([id_grupo, fecha_str, id_profesor, id_incidencia]):
         return jsonify({"error": "Faltan datos obligatorios"}), 400
 
-    # validación: si no existe ningún profesor, crea uno dummy
-    if not Profesor.query.first():
-        dummy_profesor = Profesor(
-            rut="dummy",
-            password="dummy",
-            nombre="Dummy",
-            apellido="Professor",
-            codigo_recuperacion="dummy"
-        )
-        db.session.add(dummy_profesor)
-        db.session.flush()  # para asignar el id
-        id_profesor = dummy_profesor.id
+    # validación: si no existe el profesor con el id enviado, se usa o crea un profesor dummy
+    profesor = Profesor.query.get(id_profesor)
+    if not profesor:
+        dummy = Profesor.query.filter_by(rut="dummy").first()
+        if dummy:
+            id_profesor = dummy.id
+        else:
+            dummy_profesor = Profesor(
+                rut="dummy",
+                password="dummy",
+                nombre="Dummy",
+                apellido="Professor",
+                codigo_recuperacion="dummy"
+            )
+            db.session.add(dummy_profesor)
+            db.session.flush()  # asigna el id dummy
+            id_profesor = dummy_profesor.id
 
     try:
         fecha = datetime.fromisoformat(fecha_str)
