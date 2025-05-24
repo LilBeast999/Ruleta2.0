@@ -128,13 +128,30 @@ export default function Ruleta({ defaultTitulos = [] }) {
       zIndex: 1
     },
     button: {
-      marginTop: 20,
-      padding: '10px 20px',
-      borderRadius: '5px',
-      backgroundColor: '#61dafb',
+      display: 'block',
+      margin: '1.5rem auto 0',
+      padding: '0.75rem 1.5rem',
+      fontSize: '1rem',
+      fontWeight: 600,
       border: 'none',
-      fontSize: '16px',
-      cursor: 'pointer'
+      borderRadius: '6px',
+      cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      backgroundColor: '#89ac76',
+      color: 'white',
+      boxShadow: '0 2px 4px rgba(66, 153, 225, 0.3)',
+      // Nuevas propiedades para estados
+      ':disabled': {
+        backgroundColor: '#63b3ed',
+        cursor: 'not-allowed',
+        boxShadow: 'none',
+        transform: 'none'
+      },
+      ':hover:not(:disabled)': {
+        backgroundColor: '#89ac76',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 6px rgba(66, 153, 225, 0.3)'
+      }
     },
     winner: {
       marginTop: 20,
@@ -177,15 +194,19 @@ export default function Ruleta({ defaultTitulos = [] }) {
           <div style={styles.center} />
         </div>
 
-        <button onClick={spin} disabled={spinning} style={styles.button}>
+         <button 
+            onClick={spin} 
+            disabled={spinning} 
+            style={{
+              ...styles.button,
+              // Sobreescribe pseudo-clases para React
+              backgroundColor: spinning ? '#63b3ed' : '#89ac76',
+              transform: spinning ? 'none' : 'translateY(0)',
+              boxShadow: spinning ? 'none' : '0 2px 4px rgba(66, 153, 225, 0.3)'
+            }}
+            >
           {spinning ? 'Girando…' : 'Girar ruleta'}
         </button>
-
-        {ganador && (
-          <div style={styles.winner}>
-            Ganador: <strong>{ganador}</strong>
-          </div>
-        )}
       </div>
 
       <div style={styles.textareaContainer}>
@@ -196,6 +217,11 @@ export default function Ruleta({ defaultTitulos = [] }) {
           onChange={e => setRawInput(e.target.value)}
           placeholder="Escribe cada opción en una línea"
         />
+        {ganador && (
+          <div style={styles.winner}>
+            Ganador: <strong>{ganador}</strong>
+          </div>
+        )}
       </div>
     </div>
   );
