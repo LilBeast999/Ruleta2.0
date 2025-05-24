@@ -19,10 +19,12 @@ export default function RuletaIncidencias() {
 
   const botonEstilo = {
     padding: '12px 24px',
-    fontSize: 18,
-    borderRadius: 5,
+    fontSize: '1rem',
+    borderRadius: 6,
     cursor: 'pointer',
-    marginTop: 20
+    marginTop: 20,
+    fontWeight: 600,
+    transition: 'all 0.2s ease',
   };
 
   // Carga inicial de grupos
@@ -181,7 +183,9 @@ export default function RuletaIncidencias() {
             margin: '20px auto 0'   // 20px arriba, centrado, 0 abajo
           }}
         >
-          {spinning ? 'Girando…' : 'Girar ruleta'}
+          <button className="wheel-button" disabled={spinning}>
+            {spinning ? 'Girando…' : 'Girar ruleta'}
+          </button>
         </button>
       </div>
     );
@@ -217,7 +221,7 @@ export default function RuletaIncidencias() {
   };
 
   return (
-    <div style={{ display:'flex', gap:40, alignItems:'flex-start' }}>
+    <div className="ruleta-container">
       {/* Columna de Ruleta */}
       <div style={{ width:520, minHeight:540 }}>
         {fase === 0 && (
@@ -322,7 +326,7 @@ export default function RuletaIncidencias() {
 
         {/* Guardar */}
         {incSel && (!individual || mbrSel) && (
-            <button onClick={guardarSorteo} style={{...botonEstilo,
+            <button className="wheel-button save-button" onClick={guardarSorteo} style={{...botonEstilo,
                   margin: '20px auto 0',     
                   display: 'block'}}>
                 Guardar Resultado
