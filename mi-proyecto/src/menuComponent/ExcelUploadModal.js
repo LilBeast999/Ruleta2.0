@@ -5,11 +5,15 @@ import './ExcelUploadModal.css';
 export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState({ type: '', message: '' });
+  const [clearData, setClearData] = useState(false);
+  const [isUploading, setIsUploading] = useState(false); // Nuevo estado
 
   // reinicia el estado del modal
   const resetModal = () => {
     setSelectedFile(null);
     setUploadStatus({ type: '', message: '' });
+    setClearData(false);
+    setIsUploading(false); // Resetear estado de carga
   };
 
   const handleFileSelect = (type) => {
@@ -27,12 +31,15 @@ export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
     };
     input.click();
   };
-
   const handleGenerate = async () => {
     if (!selectedFile) return;
-
+    
+    setIsUploading(true); // Iniciar estado de carga
+    setUploadStatus({ type: '', message: '' }); // Limpiar mensajes anteriores
+    
     const formData = new FormData();
     formData.append('file', selectedFile.file);
+    formData.append('clearData', clearData.toString());
 
     // define la url según el tipo de excel seleccionado
     let url = '';
@@ -65,6 +72,8 @@ export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
       setTimeout(() => {
         resetModal();
       }, 3000);
+    } finally {
+      setIsUploading(false); // Finalizar estado de carga
     }
   };
 
@@ -109,10 +118,28 @@ export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
             <span className="upload-label">Subir excel de alumnos</span>
           </div>
         </div>
-        
-        {selectedFile && (
+          {selectedFile && (
           <div className="file-selected">
             <span className="file-name">{selectedFile.file.name}</span>
+          </div>
+        )}
+
+        {/* opción para limpiar datos existentes */}
+        {selectedFile && (
+          <div className="clear-data-option">
+            <label className="clear-data-label">
+              <input
+                type="checkbox"
+                checked={clearData}
+                onChange={(e) => setClearData(e.target.checked)}
+                className="clear-data-checkbox"
+              />
+              <span className="checkmark"></span>
+              Limpiar datos existentes antes de importar
+            </label>
+            <div className="clear-data-warning">
+              ⚠️ Esta acción eliminará todos los datos relacionados (sorteos, comentarios, etc.)
+            </div>
           </div>
         )}
         
@@ -142,11 +169,11 @@ export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
         )}
         
         <button 
-          className="generate-btn"
+          className={`generate-btn ${isUploading ? 'processing' : ''}`}
           onClick={handleGenerate}
-          disabled={!selectedFile}
+          disabled={!selectedFile || isUploading}
         >
-          Subir
+          {isUploading ? 'Procesando Excel...' : 'Subir'}
         </button>
       </div>
     </div>

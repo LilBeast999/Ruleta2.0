@@ -326,6 +326,15 @@
   cursor: not-allowed;
 }
 
+.generate-btn.processing {
+  background-color: #6b7280;
+  cursor: wait;
+}
+
+.generate-btn.processing:hover {
+  background-color: #6b7280;
+}
+
 .status-message {
   margin-top: 1rem;
   margin-bottom: 1.5rem; 
@@ -350,4 +359,80 @@
 }
 .status-text {
   flex: 1;
+}
+
+/* Estilos para la opción de limpiar datos */
+.clear-data-option {
+  margin: 20px 0;
+  padding: 15px;
+  background-color: #fef3c7;
+  border-radius: 8px;
+  border-left: 4px solid #f59e0b;
+}
+
+.clear-data-label {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  position: relative;
+  padding-left: 30px;
+  user-select: none;
+}
+
+.clear-data-checkbox {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 18px;
+  width: 18px;
+  background-color: white;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.clear-data-label:hover .checkmark {
+  border-color: #f59e0b;
+}
+
+.clear-data-checkbox:checked ~ .checkmark {
+  background-color: #f59e0b;
+  border-color: #f59e0b;
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 5px;
+  top: 2px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.clear-data-checkbox:checked ~ .checkmark:after {
+  display: block;
+}
+
+.clear-data-warning {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #92400e;
+  font-style: italic;
+  line-height: 1.4;
 }

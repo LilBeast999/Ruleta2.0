@@ -176,7 +176,15 @@ function Historial({ onBackToMenu }) {
                           <p><strong>Grupo:</strong> {item.grupo}</p>
                           <p><strong>Tipo Incidente:</strong> {item.tipoIncidente}</p>
                           <p><strong>Incidente:</strong> {item.incidente}</p>
-                          <p><strong>Fecha:</strong> {item.fecha}</p>
+                          <p><strong>Fecha:</strong> {new Date(item.fecha).toLocaleString('es-CL', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            timeZone: 'America/Santiago' 
+                          })}</p>
                           <p><strong>Comentario:</strong> {item.comentario}</p>
                           {item.alumno && (
                             <p>

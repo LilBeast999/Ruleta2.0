@@ -5,24 +5,105 @@ from app.models.incidencia import Incidencia
 from app.models.grupo import Grupo
 from app.models.alumno import Alumno
 from app.models.proyecto import Proyecto
+from app.models.sorteo import Sorteo
+from app.models.comentario import Comentario
 from app import db
 import logging
 from sqlalchemy import text
 
 excel_bp = Blueprint('excel', __name__)
 
+def clear_incidencias_data():
+    """elimina todos los datos de incidencias y sus dependencias"""
+    try:
+        # eliminar datos en orden de dependencias
+        comentarios_count = Comentario.query.count()
+        if comentarios_count > 0:
+            db.session.execute(text("DELETE FROM comentario"))
+            print(f"eliminados {comentarios_count} comentarios")
+        
+        sorteos_count = Sorteo.query.count()
+        if sorteos_count > 0:
+            db.session.execute(text("DELETE FROM sorteo"))
+            print(f"eliminados {sorteos_count} sorteos")
+        
+        incidencias_count = Incidencia.query.count()
+        if incidencias_count > 0:
+            db.session.execute(text("DELETE FROM incidencia"))
+            print(f"eliminadas {incidencias_count} incidencias")
+        
+        categorias_count = Categoria.query.count()
+        if categorias_count > 0:
+            db.session.execute(text("DELETE FROM categoria"))
+            print(f"eliminadas {categorias_count} categorías")
+        
+        db.session.commit()
+        print("limpieza de incidencias completada")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"error limpiando incidencias: {str(e)}")
+        return False
+
+def clear_grupos_alumnos_data():
+    """elimina todos los datos de grupos, alumnos y proyectos"""
+    try:
+        # eliminar datos en orden de dependencias
+        comentarios_count = Comentario.query.count()
+        if comentarios_count > 0:
+            db.session.execute(text("DELETE FROM comentario"))
+            print(f"eliminados {comentarios_count} comentarios")
+        
+        sorteos_count = Sorteo.query.count()
+        if sorteos_count > 0:
+            db.session.execute(text("DELETE FROM sorteo"))
+            print(f"eliminados {sorteos_count} sorteos")
+        
+        alumnos_count = Alumno.query.count()
+        if alumnos_count > 0:
+            db.session.execute(text("DELETE FROM alumno"))
+            print(f"eliminados {alumnos_count} alumnos")
+        
+        grupos_count = Grupo.query.count()
+        if grupos_count > 0:
+            db.session.execute(text("DELETE FROM grupo"))
+            print(f"eliminados {grupos_count} grupos")
+        
+        proyectos_count = Proyecto.query.count()
+        if proyectos_count > 0:
+            db.session.execute(text("DELETE FROM proyecto"))
+            print(f"eliminados {proyectos_count} proyectos")
+        
+        db.session.commit()
+        print("limpieza de grupos y alumnos completada")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"error limpiando grupos/alumnos: {str(e)}")
+        return False
+
 @excel_bp.route('/upload_excel_incidencias', methods=['POST'])
 def upload_excel_incidencias():
-    print("files received:", list(request.files.keys()))
+    print("archivos recibidos:", list(request.files.keys()))
     if 'file' not in request.files:
-        return jsonify({"error": "no file provided"}), 400
+        return jsonify({"error": "archivo no proporcionado"}), 400
 
     file = request.files['file']
     if file.filename == "":
-        return jsonify({"error": "no file selected"}), 400
+        return jsonify({"error": "archivo no seleccionado"}), 400
+
+    # verificar si hay que limpiar datos
+    clear_data = request.form.get('clearData', 'false').lower() == 'true'
+    print(f"limpiar datos: {clear_data}")
 
     try:
-        # reiniciar secuencias (si es necesario)
+        # limpiar datos si se solicita
+        if clear_data:
+            print("limpiando datos de incidencias...")
+            if not clear_incidencias_data():
+                return jsonify({"error": "error al limpiar datos"}), 500
+
+        # reiniciar secuencias de ids
         try:
             with db.engine.connect() as conn:
                 result = conn.execute(text("SELECT MAX(id) FROM categoria"))
@@ -40,10 +121,24 @@ def upload_excel_incidencias():
         
         df = pd.read_excel(file)
         df.columns = df.columns.str.lower().str.strip()
-        print("columnas leídas:", df.columns.tolist())
+        print("columnas:", df.columns.tolist())
 
-        if 'categorias' not in df.columns or 'subcategorias' not in df.columns:
-            return jsonify({"error": "el excel debe contener columnas 'categorias' y 'subcategorias'."}), 400
+        # validar que sea archivo de incidencias
+        required_columns = ['categorias', 'subcategorias']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        # detectar si es archivo incorrecto
+        alumnos_columns = ['grupo', 'integrante', 'proyecto']
+        if any(col.lower() in [c.lower() for c in df.columns] for col in alumnos_columns):
+            return jsonify({
+                "error": "archivo incorrecto: parece ser de alumnos, usa el endpoint correcto"
+            }), 400
+        
+        if missing_columns:
+            available_columns = df.columns.tolist()
+            return jsonify({
+                "error": f"faltan columnas: {', '.join(missing_columns)}. disponibles: {', '.join(available_columns)}"
+            }), 400
 
         stats = {
             "categorias_creadas": 0,
@@ -60,7 +155,7 @@ def upload_excel_incidencias():
                 continue
 
             try:
-                # gestionar la categoría
+                # crear o buscar categoría
                 categoria = Categoria.query.filter_by(nombre=categoria_nombre).first()
                 if not categoria:
                     categoria = Categoria(nombre=categoria_nombre)
@@ -74,7 +169,7 @@ def upload_excel_incidencias():
 
                 categoria_id = categoria.id
 
-                # gestionar la incidencia (subcategoría)
+                # crear o buscar incidencia
                 incidencia_existente = Incidencia.query.filter_by(
                     id_categoria=categoria_id,
                     descripcion=subcategoria
@@ -88,10 +183,10 @@ def upload_excel_incidencias():
                     )
                     db.session.add(incidencia)
                     db.session.commit()
-                    print(f"incidencia creada: {subcategoria} para categoría id: {categoria_id}")
+                    print(f"incidencia creada: {subcategoria}")
                     stats["incidencias_creadas"] += 1
                 else:
-                    print(f"incidencia existente: {subcategoria} para categoría id: {categoria_id}")
+                    print(f"incidencia existente: {subcategoria}")
                     stats["incidencias_existentes"] += 1
             except Exception as row_error:
                 db.session.rollback()
@@ -100,9 +195,9 @@ def upload_excel_incidencias():
                 logging.error(error_msg, exc_info=True)
                 
         if stats["errores"]:
-            return jsonify({"message": "excel procesado con algunos errores", "stats": stats}), 207
+            return jsonify({"message": "excel procesado con errores", "stats": stats}), 207
         else:
-            return jsonify({"message": "excel procesado exitosamente", "stats": stats}), 200
+            return jsonify({"message": "excel procesado correctamente", "stats": stats}), 200
 
     except Exception as e:
         db.session.rollback()
@@ -112,16 +207,26 @@ def upload_excel_incidencias():
 
 @excel_bp.route('/upload_excel_grupos_alumnos', methods=['POST'])
 def upload_excel_grupos_alumnos():
-    print("files received:", list(request.files.keys()))
+    print("archivos recibidos:", list(request.files.keys()))
     if 'file' not in request.files:
-        return jsonify({"error": "no file provided"}), 400
+        return jsonify({"error": "archivo no proporcionado"}), 400
 
     file = request.files['file']
     if file.filename == "":
-        return jsonify({"error": "no file selected"}), 400
+        return jsonify({"error": "archivo no seleccionado"}), 400
+
+    # verificar si hay que limpiar datos
+    clear_data = request.form.get('clearData', 'false').lower() == 'true'
+    print(f"limpiar datos: {clear_data}")
 
     try:
-        # reiniciar secuencias para grupo, alumno y proyecto
+        # limpiar datos si se solicita
+        if clear_data:
+            print("limpiando datos de grupos y alumnos...")
+            if not clear_grupos_alumnos_data():
+                return jsonify({"error": "error al limpiar datos"}), 500
+
+        # reiniciar secuencias de ids
         try:
             with db.engine.connect() as conn:
                 tables = ['grupo', 'alumno', 'proyecto']
@@ -130,21 +235,29 @@ def upload_excel_grupos_alumnos():
                     max_id = result.scalar() or 0
                     conn.execute(text(f"ALTER SEQUENCE {table}_id_seq RESTART WITH {max_id + 1}"))
                 conn.commit()
-                print("secuencias reiniciadas correctamente")
+                print("secuencias reiniciadas")
         except Exception as seq_error:
             print("error reiniciando secuencias:", str(seq_error))
-
+        
         df = pd.read_excel(file)
-        print("columnas leídas:", df.columns.tolist())
+        df.columns = df.columns.str.strip()
+        print("columnas:", df.columns.tolist())
+
+        # validar que sea archivo de grupos/alumnos
+        incidencias_columns = ['categorias', 'subcategorias']
+        if any(col.lower() in [c.lower() for c in df.columns] for col in incidencias_columns):
+            return jsonify({
+                "error": "archivo incorrecto: parece ser de incidencias, usa el endpoint correcto"
+            }), 400
 
         required_columns = ['Grupo']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            return jsonify({"error": f"faltan columnas requeridas: {', '.join(missing_columns)}"}), 400
+            return jsonify({"error": f"faltan columnas: {', '.join(missing_columns)}"}), 400
 
         integrantes_columns = [col for col in df.columns if 'Integrante' in col]
         if not integrantes_columns:
-            return jsonify({"error": "el excel debe contener al menos una columna 'Integrante'"}), 400
+            return jsonify({"error": "debe contener al menos una columna 'Integrante'"}), 400
 
         stats = {
             "grupos_creados": 0,
@@ -164,7 +277,7 @@ def upload_excel_grupos_alumnos():
                 proyecto1_id = None
                 proyecto2_id = None
                 
-                # proyecto 1
+                # procesar proyecto 1
                 if 'Proyecto1' in df.columns and pd.notna(row['Proyecto1']):
                     nombre_proyecto1 = str(row['Proyecto1']).strip()
                     if nombre_proyecto1:
@@ -173,14 +286,13 @@ def upload_excel_grupos_alumnos():
                             proyecto1 = Proyecto(nombre=nombre_proyecto1)
                             db.session.add(proyecto1)
                             db.session.commit()
-                            print(f"proyecto1 creado: {nombre_proyecto1}, id: {proyecto1.id}")
+                            print(f"proyecto1 creado: {nombre_proyecto1}")
                             stats["proyectos_creados"] += 1
                         else:
-                            print(f"proyecto1 existente: {nombre_proyecto1}, id: {proyecto1.id}")
                             stats["proyectos_existentes"] += 1
                         proyecto1_id = proyecto1.id
                 
-                # proyecto 2
+                # procesar proyecto 2
                 if 'Proyecto2' in df.columns and pd.notna(row['Proyecto2']):
                     nombre_proyecto2 = str(row['Proyecto2']).strip()
                     if nombre_proyecto2:
@@ -189,14 +301,13 @@ def upload_excel_grupos_alumnos():
                             proyecto2 = Proyecto(nombre=nombre_proyecto2)
                             db.session.add(proyecto2)
                             db.session.commit()
-                            print(f"proyecto2 creado: {nombre_proyecto2}, id: {proyecto2.id}")
+                            print(f"proyecto2 creado: {nombre_proyecto2}")
                             stats["proyectos_creados"] += 1
                         else:
-                            print(f"proyecto2 existente: {nombre_proyecto2}, id: {proyecto2.id}")
                             stats["proyectos_existentes"] += 1
                         proyecto2_id = proyecto2.id
 
-                # gestionar grupo
+                # crear o actualizar grupo
                 grupo = Grupo.query.filter_by(nombre=nombre_grupo).first()
                 if not grupo:
                     grupo = Grupo(
@@ -206,23 +317,26 @@ def upload_excel_grupos_alumnos():
                     )
                     db.session.add(grupo)
                     db.session.commit()
-                    print(f"grupo creado: {nombre_grupo}, id: {grupo.id}")
+                    print(f"grupo creado: {nombre_grupo}")
                     stats["grupos_creados"] += 1
                 else:
+                    # actualizar proyectos si es necesario
                     if proyecto1_id and grupo.id_proyecto1 != proyecto1_id:
                         grupo.id_proyecto1 = proyecto1_id
                     if proyecto2_id and grupo.id_proyecto2 != proyecto2_id:
                         grupo.id_proyecto2 = proyecto2_id
                     db.session.commit()
-                    print(f"grupo actualizado: {nombre_grupo}, id: {grupo.id}")
                     stats["grupos_existentes"] += 1
 
                 grupo_id = grupo.id
-                # gestionar alumnos por columna de integrante
+                
+                # procesar alumnos
                 for col in integrantes_columns:
                     nombre_completo = str(row[col]).strip()
                     if not nombre_completo or nombre_completo.lower() == 'nan':
                         continue
+                    
+                    # separar nombre y apellido
                     partes = nombre_completo.split()
                     if len(partes) >= 2:
                         nombre = partes[0]
@@ -231,6 +345,7 @@ def upload_excel_grupos_alumnos():
                         nombre = nombre_completo
                         apellido = ""
                     
+                    # generar matrícula temporal
                     import time
                     timestamp = int(time.time() * 1000) % 10000
                     matricula_temp = f"{nombre[:3]}{apellido[:3]}{index+1}{timestamp}".upper()
@@ -244,23 +359,23 @@ def upload_excel_grupos_alumnos():
                         )
                         db.session.add(alumno)
                         db.session.commit()
-                        print(f"alumno creado: {nombre} {apellido}, matrícula: {matricula_temp}")
+                        print(f"alumno creado: {nombre} {apellido}")
                         stats["alumnos_creados"] += 1
                     except Exception as alumno_error:
                         db.session.rollback()
-                        error_msg = f"error al crear alumno '{nombre} {apellido}': {str(alumno_error)}"
+                        error_msg = f"error creando alumno '{nombre} {apellido}': {str(alumno_error)}"
                         stats["errores"].append(error_msg)
                         logging.error(error_msg)
             except Exception as row_error:
                 db.session.rollback()
-                error_msg = f"error en fila {index+1} (grupo: {row.get('Grupo', 'n/a')}): {str(row_error)}"
+                error_msg = f"error en fila {index+1}: {str(row_error)}"
                 stats["errores"].append(error_msg)
                 logging.error(error_msg, exc_info=True)
                 
         if stats["errores"]:
-            return jsonify({"message": "excel procesado con algunos errores", "stats": stats}), 207
+            return jsonify({"message": "excel procesado con errores", "stats": stats}), 207
         else:
-            return jsonify({"message": "excel procesado exitosamente", "stats": stats}), 200
+            return jsonify({"message": "excel procesado correctamente", "stats": stats}), 200
     except Exception as e:
         db.session.rollback()
         logging.error(f"error procesando excel: {str(e)}", exc_info=True)
