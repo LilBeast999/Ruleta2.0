@@ -2,23 +2,28 @@ import React, { useState, useEffect } from 'react';
 import './crud.css';
 
 function CRUD() {
+  // estados principales para cada entidad
   const [activeTab, setActiveTab] = useState('categorias');
   const [categorias, setCategorias] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
   const [grupos, setGrupos] = useState([]);
   const [alumnos, setAlumnos] = useState([]);
+  
+  // manejo del modal y formularios
   const [editingItem, setEditingItem] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({});
 
-  // Estados para filtros y búsqueda
+  // filtros y búsqueda
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
 
+  // cargar datos cuando cambia la pestaña activa
   useEffect(() => {
     loadData();
   }, [activeTab]);
 
+  // fetch de datos según la pestaña activa
   const loadData = async () => {
     try {
       switch (activeTab) {
@@ -28,9 +33,15 @@ function CRUD() {
           setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
           break;
         case 'incidencias':
-          const incidenciasRes = await fetch('http://localhost:5000/incidencias');
+          // cargar incidencias y categorías para el formulario
+          const [incidenciasRes, categoriasForIncRes] = await Promise.all([
+            fetch('http://localhost:5000/incidencias'),
+            fetch('http://localhost:5000/categorias')
+          ]);
           const incidenciasData = await incidenciasRes.json();
+          const categoriasForIncData = await categoriasForIncRes.json();
           setIncidencias(Array.isArray(incidenciasData) ? incidenciasData : []);
+          setCategorias(Array.isArray(categoriasForIncData) ? categoriasForIncData : []);
           break;
         case 'grupos':
           const gruposRes = await fetch('http://localhost:5000/grupos');
@@ -38,9 +49,15 @@ function CRUD() {
           setGrupos(Array.isArray(gruposData) ? gruposData : []);
           break;
         case 'alumnos':
-          const alumnosRes = await fetch('http://localhost:5000/alumnos');
+          // cargar alumnos y grupos para el formulario
+          const [alumnosRes, gruposForAlumRes] = await Promise.all([
+            fetch('http://localhost:5000/alumnos'),
+            fetch('http://localhost:5000/grupos')
+          ]);
           const alumnosData = await alumnosRes.json();
+          const gruposForAlumData = await gruposForAlumRes.json();
           setAlumnos(Array.isArray(alumnosData) ? alumnosData : []);
+          setGrupos(Array.isArray(gruposForAlumData) ? gruposForAlumData : []);
           break;
       }
     } catch (error) {
@@ -48,18 +65,21 @@ function CRUD() {
     }
   };
 
+  // abrir modal para crear nuevo elemento
   const handleCreate = () => {
     setEditingItem(null);
     setFormData({});
     setShowModal(true);
   };
 
+  // abrir modal con datos para editar
   const handleEdit = (item) => {
     setEditingItem(item);
     setFormData(item);
     setShowModal(true);
   };
 
+  // eliminar elemento con confirmación
   const handleDelete = async (id) => {
     if (!window.confirm('¿Estás seguro de que quieres eliminar este elemento?')) return;
     
@@ -73,6 +93,7 @@ function CRUD() {
     }
   };
 
+  // guardar elemento (crear o actualizar)
   const handleSave = async (e) => {
     e.preventDefault();
     try {
@@ -96,6 +117,7 @@ function CRUD() {
     }
   };
 
+  // mapeo de pestañas a endpoints de la api
   const getEndpoint = () => {
     const endpoints = {
       categorias: 'categorias',
@@ -106,6 +128,7 @@ function CRUD() {
     return endpoints[activeTab];
   };
 
+  // obtener datos de la pestaña actual
   const getCurrentData = () => {
     switch (activeTab) {
       case 'categorias': return categorias;
@@ -116,6 +139,7 @@ function CRUD() {
     }
   };
 
+  // filtrar datos por búsqueda y categoría
   const filteredData = getCurrentData().filter(item => {
     const matchesSearch = Object.values(item).some(value => 
       value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
@@ -125,6 +149,7 @@ function CRUD() {
     return matchesSearch && matchesCategory;
   });
 
+  // renderizar tabla según la pestaña activa
   const renderTable = () => {
     const data = filteredData;
     
@@ -137,14 +162,15 @@ function CRUD() {
     }
 
     switch (activeTab) {
-      case 'categorias':
+      case 'grupos':
         return (
           <table className="crud-table">
             <thead>
               <tr>
                 <th>ID</th>
                 <th>Nombre</th>
-                <th>Descripción</th>
+                <th>Proyecto 1</th>
+                <th>Proyecto 2</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -153,7 +179,33 @@ function CRUD() {
                 <tr key={item.id}>
                   <td>{item.id}</td>
                   <td>{item.nombre}</td>
-                  <td>{item.descripcion}</td>
+                  <td>{item.proyecto1_nombre || 'Sin asignar'}</td>
+                  <td>{item.proyecto2_nombre || 'Sin asignar'}</td>
+                  <td>
+                    <button onClick={() => handleEdit(item)} className="btn-edit">Editar</button>
+                    <button onClick={() => handleDelete(item.id)} className="btn-delete">Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+
+      case 'categorias':
+        return (
+          <table className="crud-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.map(item => (
+                <tr key={item.id}>
+                  <td>{item.id}</td>
+                  <td>{item.nombre}</td>
                   <td>
                     <button onClick={() => handleEdit(item)} className="btn-edit">Editar</button>
                     <button onClick={() => handleDelete(item.id)} className="btn-delete">Eliminar</button>
@@ -191,35 +243,6 @@ function CRUD() {
           </table>
         );
       
-      case 'grupos':
-        return (
-          <table className="crud-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Nombre</th>
-                <th>Descripción</th>
-                <th>Cantidad Alumnos</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map(item => (
-                <tr key={item.id}>
-                  <td>{item.id}</td>
-                  <td>{item.nombre}</td>
-                  <td>{item.descripcion}</td>
-                  <td>{item.alumnos?.length || 0}</td>
-                  <td>
-                    <button onClick={() => handleEdit(item)} className="btn-edit">Editar</button>
-                    <button onClick={() => handleDelete(item.id)} className="btn-delete">Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      
       case 'alumnos':
         return (
           <table className="crud-table">
@@ -228,7 +251,6 @@ function CRUD() {
                 <th>ID</th>
                 <th>Nombre</th>
                 <th>Apellido</th>
-                <th>RUT</th>
                 <th>Grupo</th>
                 <th>Acciones</th>
               </tr>
@@ -239,7 +261,6 @@ function CRUD() {
                   <td>{item.id}</td>
                   <td>{item.nombre}</td>
                   <td>{item.apellido}</td>
-                  <td>{item.rut}</td>
                   <td>{item.grupo_nombre}</td>
                   <td>
                     <button onClick={() => handleEdit(item)} className="btn-edit">Editar</button>
@@ -256,6 +277,7 @@ function CRUD() {
     }
   };
 
+  // modal con formulario dinámico
   const renderModal = () => {
     if (!showModal) return null;
 
@@ -281,6 +303,7 @@ function CRUD() {
     );
   };
 
+  // campos de formulario según el tipo de entidad
   const renderFormFields = () => {
     switch (activeTab) {
       case 'categorias':
@@ -293,13 +316,6 @@ function CRUD() {
                 value={formData.nombre || ''}
                 onChange={(e) => setFormData({...formData, nombre: e.target.value})}
                 required
-              />
-            </div>
-            <div className="form-group">
-              <label>Descripción:</label>
-              <textarea
-                value={formData.descripcion || ''}
-                onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
               />
             </div>
           </>
@@ -345,13 +361,6 @@ function CRUD() {
                 required
               />
             </div>
-            <div className="form-group">
-              <label>Descripción:</label>
-              <textarea
-                value={formData.descripcion || ''}
-                onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-              />
-            </div>
           </>
         );
       
@@ -377,15 +386,6 @@ function CRUD() {
               />
             </div>
             <div className="form-group">
-              <label>RUT:</label>
-              <input
-                type="text"
-                value={formData.rut || ''}
-                onChange={(e) => setFormData({...formData, rut: e.target.value})}
-                required
-              />
-            </div>
-            <div className="form-group">
               <label>Grupo:</label>
               <select
                 value={formData.grupo_id || ''}
@@ -407,10 +407,7 @@ function CRUD() {
 
   return (
     <div className="crud-container">
-      <div className="crud-header">
-        <h1>Administración de Datos</h1>
-      </div>
-
+      {/* pestañas para navegar entre entidades */}
       <div className="crud-tabs">
         <button 
           className={`tab-button ${activeTab === 'categorias' ? 'active' : ''}`}
@@ -438,6 +435,7 @@ function CRUD() {
         </button>
       </div>
 
+      {/* barra de herramientas con botón crear y filtros */}
       <div className="crud-toolbar">
         <div className="toolbar-left">
           <button onClick={handleCreate} className="btn-create">
@@ -453,6 +451,7 @@ function CRUD() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
+          {/* filtro por categoría solo en incidencias */}
           {activeTab === 'incidencias' && (
             <select
               value={selectedCategory}

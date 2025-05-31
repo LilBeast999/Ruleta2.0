@@ -34,25 +34,24 @@ def create_app():
         except Exception as e:
             raise Exception(f"No se pudo conectar a la base de datos: {e}")
 
-    # importar y registrar rutas
-    from app.routes.alumno_routes import alumno_bp
-    app.register_blueprint(alumno_bp)
-    from app.routes.categoria_routes import categoria_bp
-    app.register_blueprint(categoria_bp)
-    from app.routes.comentario_routes import comentario_bp
-    app.register_blueprint(comentario_bp)
-    from app.routes.grupo_routes import grupo_bp
-    app.register_blueprint(grupo_bp)
+    # registrar blueprints existentes
     from app.routes.profesor_routes import profesor_bp
-    app.register_blueprint(profesor_bp)
-    from app.routes.incidencia_routes import incidencia_bp
-    app.register_blueprint(incidencia_bp)
     from app.routes.sorteo_routes import sorteo_bp
-    app.register_blueprint(sorteo_bp)
     from app.routes.excel_routes import excel_bp
+    
+    # registrar nuevos blueprints para CRUD
+    from app.routes.categoria_routes import categoria_bp
+    from app.routes.incidencia_routes import incidencia_bp
+    from app.routes.grupo_routes import grupo_bp
+    from app.routes.alumno_routes import alumno_bp
+    
+    app.register_blueprint(profesor_bp)
+    app.register_blueprint(sorteo_bp)
     app.register_blueprint(excel_bp)
-    from app.routes.proyecto_routes import proyecto_bp
-    app.register_blueprint(proyecto_bp)
+    app.register_blueprint(categoria_bp)
+    app.register_blueprint(incidencia_bp)
+    app.register_blueprint(grupo_bp)
+    app.register_blueprint(alumno_bp)
 
     @app.route('/')
     def home():
