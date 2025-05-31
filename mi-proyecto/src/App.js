@@ -4,6 +4,7 @@ import Menu from './menuComponent/Menu';
 import Historial from './historialComponent/historial';
 import Navbar from './NavbarComponent/navbar';
 import RuletaIncidencias from './RuletaIncidencias';
+import CRUD from './CRUDcomponent/crud';
 import './App.css';
 
 function App() {
@@ -19,6 +20,8 @@ function App() {
     title = 'Girar Ruleta de Incidencias';
   } else if (currentView === 'historial') {
     title = 'Historial de Sorteos';
+  } else if (currentView === 'crud') {
+    title = 'Administración de Datos';
   }
 
   return (
@@ -33,6 +36,7 @@ function App() {
           onCreateRuleta={() => setCurrentView('ruletaEstandar')}
           onGirarRuleta={() => setCurrentView('ruletaIncidencias')}
           onHistorial={() => setCurrentView('historial')}
+          onCRUD={() => setCurrentView('crud')}
         />
       )}
 
@@ -50,6 +54,10 @@ function App() {
 
       {currentView === 'historial' && (
         <Historial onBackToMenu={() => setCurrentView('menu')} />
+      )}
+
+      {currentView === 'crud' && (
+        <CRUD />
       )}
     </div>
   );

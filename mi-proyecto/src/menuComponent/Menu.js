@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import ExcelUploadModal from './ExcelUploadModal';
 import './Menu.css';
 
-export default function Menu({ onCreateRuleta, onRegister, onHistorial, onGirarRuleta }) {
+export default function Menu({ onCreateRuleta, onRegister, onHistorial, onGirarRuleta, onCRUD }) {
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
 
   const handleExcelUpload = () => {
@@ -31,6 +31,9 @@ export default function Menu({ onCreateRuleta, onRegister, onHistorial, onGirarR
         </button>
         <button className="menu-button" onClick={handleExcelUpload}>
           Subir Excel de datos
+        </button>
+        <button className="menu-button" onClick={onCRUD}>
+          Administrar Datos
         </button>
         <button className="menu-button" onClick={onHistorial}>
           Historial de Ruletas
