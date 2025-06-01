@@ -7,12 +7,18 @@ export default function RuletaIncidencias() {
   const [categorias, setCategorias] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
   const [miembros, setMiembros] = useState([]);
+  const [miembrosExtra, setMiembrosExtra] = useState([]);
 
-  const [fase, setFase] = useState(0); // 0=inicio,1=categorías,2=incidencias,3=miembros
+  const [fase, setFase] = useState(0); // 0=inicio,1=categorías,2=incidencias,3=miembros,4=grupoExtra,5=miembrosExtra
   const [grupoSel, setGrupoSel] = useState(null);
   const [catSel, setCatSel] = useState(null);
   const [incSel, setIncSel] = useState(null);
   const [mbrSel, setMbrSel] = useState(null);
+
+  // Nuevos estados para ruleta grupal extra
+  const [grupoExtraSel, setGrupoExtraSel] = useState(null);
+  const [mbrExtraSel, setMbrExtraSel] = useState(null);
+  const [ruletaExtraActiva, setRuletaExtraActiva] = useState(false);
 
   const [individual, setIndividual] = useState(false);
   const [comentario, setComentario] = useState('');
@@ -75,6 +81,38 @@ export default function RuletaIncidencias() {
       setMbrSel(null);
     }
   }, [individual, fase, grupoSel]);
+
+  // Fase 5: miembros del grupo extra
+  useEffect(() => {
+    if (fase === 5 && grupoExtraSel) {
+      fetch(`http://localhost:5000/grupo/${grupoExtraSel.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data.alumnos)) {
+            setMiembrosExtra(data.alumnos);
+          } else {
+            setMiembrosExtra([]);
+          }
+        })
+        .catch(() => setMiembrosExtra([]));
+    }
+  }, [fase, grupoExtraSel]);
+
+  // Función para obtener grupos disponibles (excluyendo el grupo seleccionado)
+  const gruposDisponibles = useMemo(() => {
+    return grupos.filter(g => g.id !== grupoSel?.id);
+  }, [grupos, grupoSel]);
+
+  // Función para activar la ruleta extra
+  const activarRuletaExtra = () => {
+    setRuletaExtraActiva(true);
+    setFase(4); // Ir a la fase de selección de grupo extra
+  };
+
+  // Función para verificar si se pueden activar las opciones extra
+  const puedeActivarExtra = () => {
+    return incSel && (!individual || mbrSel);
+  };
 
   // Estilos del pointer (siempre fijo)
   const pointerStyle = {
@@ -189,7 +227,7 @@ export default function RuletaIncidencias() {
     );
   }
 
-  // POST /sorteo
+  // POST /sorteo (modificado para incluir datos del grupo extra)
   const guardarSorteo = async () => {
     const nowIso = new Date().toISOString();
     const payload = {
@@ -199,7 +237,10 @@ export default function RuletaIncidencias() {
       id_incidencia:    incSel.id,
       id_alumno:        individual ? mbrSel.id : null,
       comentario:       comentario,
-      comentario_fecha: nowIso
+      comentario_fecha: nowIso,
+      // Campos opcionales para grupo extra
+      id_grupo_extra:   grupoExtraSel?.id || null,
+      id_alumno_extra:  mbrExtraSel?.id || null
     };
     try {
       const res = await fetch('http://localhost:5000/sorteo', {
@@ -245,9 +286,23 @@ export default function RuletaIncidencias() {
             onDone={i=>setMbrSel(miembros[i])}
           />
         )}
+        {fase === 4 && ruletaExtraActiva && (
+          <Wheel
+            titulos={gruposDisponibles.map(g=>g.nombre)}
+            onDone={i=>{
+              setGrupoExtraSel(gruposDisponibles[i]); 
+              setMbrExtraSel(null); 
+              setFase(5);
+            }}
+          />
+        )}
+        {fase === 5 && ruletaExtraActiva && (
+          <Wheel
+            titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
+            onDone={i=>setMbrExtraSel(miembrosExtra[i])}
+          />
+        )}
       </div>
-
-      
 
       {/* Columna de Controles */}
       <div style={{
@@ -264,7 +319,9 @@ export default function RuletaIncidencias() {
             const g = grupos.find(x=>x.id===+e.target.value);
             setGrupoSel(g);
             setCatSel(null); setIncSel(null); setMbrSel(null);
+            setGrupoExtraSel(null); setMbrExtraSel(null);
             setIndividual(false);
+            setRuletaExtraActiva(false);
             setFase(1);
           }}
           style={{fontSize:16,padding:8}}
@@ -304,6 +361,24 @@ export default function RuletaIncidencias() {
           style={{padding:8,fontSize:16,resize:'none'}}
         />
 
+        {/* Campos del Grupo Extra (solo si están seleccionados) */}
+        {grupoExtraSel && (
+          <>
+            <label><strong>Grupo Extra:</strong></label>
+            <input readOnly value={grupoExtraSel.nombre} style={{padding:8,fontSize:16}}/>
+          </>
+        )}
+
+        {mbrExtraSel && (
+          <>
+            <label><strong>Integrante Extra:</strong></label>
+            <input readOnly
+              value={`${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`}
+              style={{padding:8,fontSize:16}}
+            />
+          </>
+        )}
+
         {/* Switch Grupal/Individual */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label>Grupal</label>
@@ -321,6 +396,17 @@ export default function RuletaIncidencias() {
           </label>
           <label>Individual</label>
         </div>
+
+        {/* Botón Ruleta Grupal Extra */}
+        {puedeActivarExtra() && !ruletaExtraActiva && (
+          <button 
+            className="wheel-button" 
+            onClick={activarRuletaExtra}
+            style={{...botonEstilo, margin: '20px auto 0', display: 'block', backgroundColor: '#f58231'}}
+          >
+            Ruleta Grupal Extra
+          </button>
+        )}
 
         {/* Guardar */}
         {incSel && (!individual || mbrSel) && (
