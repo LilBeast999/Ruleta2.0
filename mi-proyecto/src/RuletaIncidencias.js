@@ -114,6 +114,17 @@ export default function RuletaIncidencias() {
     return incSel && (!individual || mbrSel);
   };
 
+  // Función para construir el comentario completo con datos extra
+  const construirComentarioCompleto = () => {
+    let comentarioCompleto = comentario.trim() || 'No hay comentario registrado';
+    
+    if (grupoExtraSel && mbrExtraSel) {
+      comentarioCompleto += ` | Grupo Extra: ${grupoExtraSel.nombre} | Integrante Extra: ${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`;
+    }
+    
+    return comentarioCompleto;
+  };
+
   // Estilos del pointer (siempre fijo)
   const pointerStyle = {
     position: 'absolute',
@@ -227,20 +238,19 @@ export default function RuletaIncidencias() {
     );
   }
 
-  // POST /sorteo (modificado para incluir datos del grupo extra)
+  // POST /sorteo (usando el comentario completo)
   const guardarSorteo = async () => {
     const nowIso = new Date().toISOString();
+    const comentarioCompleto = construirComentarioCompleto();
+    
     const payload = {
       id_grupo:         grupoSel.id,
       fecha:            nowIso,
       id_profesor:      4,
       id_incidencia:    incSel.id,
       id_alumno:        individual ? mbrSel.id : null,
-      comentario:       comentario,
-      comentario_fecha: nowIso,
-      // Campos opcionales para grupo extra
-      id_grupo_extra:   grupoExtraSel?.id || null,
-      id_alumno_extra:  mbrExtraSel?.id || null
+      comentario:       comentarioCompleto,
+      comentario_fecha: nowIso
     };
     try {
       const res = await fetch('http://localhost:5000/sorteo', {
