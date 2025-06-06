@@ -7,12 +7,22 @@ export default function RuletaIncidencias() {
   const [categorias, setCategorias] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
   const [miembros, setMiembros] = useState([]);
+  const [miembrosExtra, setMiembrosExtra] = useState([]);
 
-  const [fase, setFase] = useState(0); // 0=inicio,1=categorías,2=incidencias,3=miembros
+  const [fase, setFase] = useState(0); // 0=inicio,1=categorías,2=incidencias,3=miembros,4=grupoExtra,5=miembrosExtra
   const [grupoSel, setGrupoSel] = useState(null);
   const [catSel, setCatSel] = useState(null);
   const [incSel, setIncSel] = useState(null);
   const [mbrSel, setMbrSel] = useState(null);
+
+  // Nuevos estados para ruleta grupal extra
+  const [grupoExtraSel, setGrupoExtraSel] = useState(null);
+  const [mbrExtraSel, setMbrExtraSel] = useState(null);
+  const [ruletaExtraActiva, setRuletaExtraActiva] = useState(false);
+
+  // Nuevos estados para exclusión de estudiantes
+  const [mostrarExclusion, setMostrarExclusion] = useState(false);
+  const [estudiantesExcluidos, setEstudiantesExcluidos] = useState([]);
 
   const [individual, setIndividual] = useState(false);
   const [comentario, setComentario] = useState('');
@@ -73,8 +83,82 @@ export default function RuletaIncidencias() {
       setFase(2);
       setMiembros([]);
       setMbrSel(null);
+      // Limpiar exclusiones cuando no es individual
+      setEstudiantesExcluidos([]);
+      setMostrarExclusion(false);
     }
   }, [individual, fase, grupoSel]);
+
+  // Fase 5: miembros del grupo extra
+  useEffect(() => {
+    if (fase === 5 && grupoExtraSel) {
+      fetch(`http://localhost:5000/grupo/${grupoExtraSel.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data.alumnos)) {
+            setMiembrosExtra(data.alumnos);
+          } else {
+            setMiembrosExtra([]);
+          }
+        })
+        .catch(() => setMiembrosExtra([]));
+    }
+  }, [fase, grupoExtraSel]);
+
+  // Función para obtener grupos disponibles (excluyendo el grupo seleccionado)
+  const gruposDisponibles = useMemo(() => {
+    return grupos.filter(g => g.id !== grupoSel?.id);
+  }, [grupos, grupoSel]);
+
+  // Función para obtener miembros disponibles (excluyendo los excluidos)
+  const miembrosDisponibles = useMemo(() => {
+    return miembros.filter(m => !estudiantesExcluidos.some(exc => exc.id === m.id));
+  }, [miembros, estudiantesExcluidos]);
+
+  // Función para obtener estudiantes que pueden ser excluidos
+  const estudiantesParaExcluir = useMemo(() => {
+    return miembros.filter(m => !estudiantesExcluidos.some(exc => exc.id === m.id));
+  }, [miembros, estudiantesExcluidos]);
+
+  // Función para activar la ruleta extra
+  const activarRuletaExtra = () => {
+    setRuletaExtraActiva(true);
+    setFase(4); // Ir a la fase de selección de grupo extra
+  };
+
+  // Función para verificar si se pueden activar las opciones extra
+  const puedeActivarExtra = () => {
+    return incSel && (!individual || mbrSel);
+  };
+
+  // Función para excluir un estudiante
+  const excluirEstudiante = (estudianteId) => {
+    const estudiante = miembros.find(m => m.id === parseInt(estudianteId));
+    if (estudiante && !estudiantesExcluidos.some(exc => exc.id === estudiante.id)) {
+      setEstudiantesExcluidos(prev => [...prev, estudiante]);
+      // Si el estudiante seleccionado es excluido, limpiarlo
+      if (mbrSel && mbrSel.id === estudiante.id) {
+        setMbrSel(null);
+      }
+    }
+    setMostrarExclusion(false);
+  };
+
+  // Función para reincluir un estudiante excluido
+  const reincluirEstudiante = (estudianteId) => {
+    setEstudiantesExcluidos(prev => prev.filter(exc => exc.id !== estudianteId));
+  };
+
+  // Función para construir el comentario completo con datos extra
+  const construirComentarioCompleto = () => {
+    let comentarioCompleto = comentario.trim() || 'No hay comentario registrado';
+    
+    if (grupoExtraSel && mbrExtraSel) {
+      comentarioCompleto += ` | Grupo Extra: ${grupoExtraSel.nombre} | Integrante Extra: ${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`;
+    }
+    
+    return comentarioCompleto;
+  };
 
   // Estilos del pointer (siempre fijo)
   const pointerStyle = {
@@ -174,7 +258,7 @@ export default function RuletaIncidencias() {
         </div>
 
         {/* Botón girar */}
-        <button className="wheel-button" disabled={spinning}
+        <button className="wheel-button" disabled={spinning || n === 0}
           onClick={spin}
           style={{
             ...botonEstilo,
@@ -182,23 +266,24 @@ export default function RuletaIncidencias() {
             margin: '20px auto 0'   // 20px arriba, centrado, 0 abajo
           }}
         >
-        {spinning ? 'Girando…' : 'Girar ruleta'}
-          
+        {spinning ? 'Girando…' : n === 0 ? 'Sin opciones disponibles' : 'Girar ruleta'}
         </button>
       </div>
     );
   }
 
-  // POST /sorteo
+  // POST /sorteo (usando el comentario completo)
   const guardarSorteo = async () => {
     const nowIso = new Date().toISOString();
+    const comentarioCompleto = construirComentarioCompleto();
+    
     const payload = {
       id_grupo:         grupoSel.id,
       fecha:            nowIso,
       id_profesor:      4,
       id_incidencia:    incSel.id,
       id_alumno:        individual ? mbrSel.id : null,
-      comentario:       comentario,
+      comentario:       comentarioCompleto,
       comentario_fecha: nowIso
     };
     try {
@@ -241,13 +326,27 @@ export default function RuletaIncidencias() {
         )}
         {fase === 3 && individual && (
           <Wheel
-            titulos={miembros.map(m=>`${m.nombre} ${m.apellido}`)}
-            onDone={i=>setMbrSel(miembros[i])}
+            titulos={miembrosDisponibles.map(m=>`${m.nombre} ${m.apellido}`)}
+            onDone={i=>setMbrSel(miembrosDisponibles[i])}
+          />
+        )}
+        {fase === 4 && ruletaExtraActiva && (
+          <Wheel
+            titulos={gruposDisponibles.map(g=>g.nombre)}
+            onDone={i=>{
+              setGrupoExtraSel(gruposDisponibles[i]); 
+              setMbrExtraSel(null); 
+              setFase(5);
+            }}
+          />
+        )}
+        {fase === 5 && ruletaExtraActiva && (
+          <Wheel
+            titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
+            onDone={i=>setMbrExtraSel(miembrosExtra[i])}
           />
         )}
       </div>
-
-      
 
       {/* Columna de Controles */}
       <div style={{
@@ -264,7 +363,11 @@ export default function RuletaIncidencias() {
             const g = grupos.find(x=>x.id===+e.target.value);
             setGrupoSel(g);
             setCatSel(null); setIncSel(null); setMbrSel(null);
+            setGrupoExtraSel(null); setMbrExtraSel(null);
             setIndividual(false);
+            setRuletaExtraActiva(false);
+            setEstudiantesExcluidos([]);
+            setMostrarExclusion(false);
             setFase(1);
           }}
           style={{fontSize:16,padding:8}}
@@ -283,14 +386,104 @@ export default function RuletaIncidencias() {
         <label><strong>Incidencia:</strong></label>
         <input readOnly value={incSel?.descripcion||''} style={{padding:8,fontSize:16}}/>
 
-        {/* Integrante */}
-        {individual && mbrSel && (
+        {/* Integrante con botón de exclusión */}
+        {individual && (
           <>
-            <label><strong>Integrante seleccionado:</strong></label>
-            <input readOnly
-              value={`${mbrSel.nombre} ${mbrSel.apellido}`}
-              style={{padding:8,fontSize:16}}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ flex: 1 }}>
+                <label><strong>Integrante seleccionado:</strong></label>
+                <input readOnly
+                  value={mbrSel ? `${mbrSel.nombre} ${mbrSel.apellido}` : ''}
+                  style={{padding:8,fontSize:16, width: '100%'}}
+                />
+              </div>
+              <button
+                onClick={() => setMostrarExclusion(!mostrarExclusion)}
+                disabled={fase !== 3 || estudiantesParaExcluir.length === 0}
+                style={{
+                  padding: '8px',
+                  fontSize: '14px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: estudiantesParaExcluir.length > 0 ? 'pointer' : 'not-allowed',
+                  marginTop: '24px',
+                  marginLeft: '15px'
+                }}
+                title="Excluir estudiante de la ruleta"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Combobox para exclusión */}
+            {mostrarExclusion && (
+              <div style={{ marginTop: 8 }}>
+                <label><strong>Excluir estudiante:</strong></label>
+                <select
+                  onChange={e => {
+                    if (e.target.value) {
+                      excluirEstudiante(e.target.value);
+                    }
+                  }}
+                  value=""
+                  style={{fontSize:14, padding:6, width: '100%'}}
+                >
+                  <option value="">— Selecciona estudiante a excluir —</option>
+                  {estudiantesParaExcluir.map(m => (
+                    <option key={m.id} value={m.id}>
+                      {m.nombre} {m.apellido}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Lista de estudiantes excluidos */}
+            {estudiantesExcluidos.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <label><strong>Estudiantes excluidos:</strong></label>
+                <div style={{ 
+                  maxHeight: '100px', 
+                  overflowY: 'auto', 
+                  border: '1px solid #ddd', 
+                  borderRadius: '4px',
+                  padding: '8px',
+                  backgroundColor: '#f8f9fa'
+                }}>
+                  {estudiantesExcluidos.map(est => (
+                    <div key={est.id} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      marginBottom: '4px',
+                      fontSize: '14px'
+                    }}>
+                      <span>{est.nombre} {est.apellido}</span>
+                      <button
+                        onClick={() => reincluirEstudiante(est.id)}
+                        style={{
+                          padding: '2px 6px',
+                          fontSize: '12px',
+                          backgroundColor: '#28a745',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '3px',
+                          cursor: 'pointer'
+                        }}
+                        title="Reincluir en la ruleta"
+                      >
+                        ↺
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                  Estudiantes disponibles para sorteo: {miembrosDisponibles.length}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -304,6 +497,24 @@ export default function RuletaIncidencias() {
           style={{padding:8,fontSize:16,resize:'none'}}
         />
 
+        {/* Campos del Grupo Extra (solo si están seleccionados) */}
+        {grupoExtraSel && (
+          <>
+            <label><strong>Grupo Extra:</strong></label>
+            <input readOnly value={grupoExtraSel.nombre} style={{padding:8,fontSize:16}}/>
+          </>
+        )}
+
+        {mbrExtraSel && (
+          <>
+            <label><strong>Integrante Extra:</strong></label>
+            <input readOnly
+              value={`${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`}
+              style={{padding:8,fontSize:16}}
+            />
+          </>
+        )}
+
         {/* Switch Grupal/Individual */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <label>Grupal</label>
@@ -314,13 +525,29 @@ export default function RuletaIncidencias() {
               disabled={!incSel}
               onChange={e => {
                 setIndividual(e.target.checked);
-                if (!e.target.checked && fase === 3) setFase(2);
+                if (!e.target.checked && fase === 3) {
+                  setFase(2);
+                  // Limpiar exclusiones al cambiar a grupal
+                  setEstudiantesExcluidos([]);
+                  setMostrarExclusion(false);
+                }
               }}
             />
             <span className="switch-slider"></span>
           </label>
           <label>Individual</label>
         </div>
+
+        {/* Botón Ruleta Grupal Extra */}
+        {puedeActivarExtra() && !ruletaExtraActiva && (
+          <button 
+            className="wheel-button" 
+            onClick={activarRuletaExtra}
+            style={{...botonEstilo, margin: '20px auto 0', display: 'block', backgroundColor: '#f58231'}}
+          >
+            Ruleta Grupal Extra
+          </button>
+        )}
 
         {/* Guardar */}
         {incSel && (!individual || mbrSel) && (
