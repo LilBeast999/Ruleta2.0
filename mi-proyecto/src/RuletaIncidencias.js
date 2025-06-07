@@ -160,37 +160,65 @@ export default function RuletaIncidencias() {
     return comentarioCompleto;
   };
 
-  // Estilos del pointer (siempre fijo)
-  const pointerStyle = {
-    position: 'absolute',
-    top: '45%',
-    right: '0px',
-    transform: 'translateY(-50%)',
-    width: 0,
-    height: 0,
-    borderTop: '15px solid transparent',
-    borderBottom: '15px solid transparent',
-    borderRight: '20px solid red',
-    zIndex: 2
-  };
-
-  // Rueda genérica
+  // Rueda genérica mejorada
   function Wheel({ titulos = [], onDone }) {
     const canvasRef = useRef(null);
     const [spinAngle, setSpinAngle] = useState(0);
     const [spinning, setSpinning] = useState(false);
+    const [mostrandoResultado, setMostrandoResultado] = useState(false);
+    const [resultadoTexto, setResultadoTexto] = useState('');
+    const [resultadoIndice, setResultadoIndice] = useState(null);
 
-    const size = 500, center = size/2, radius = center - 8;
+    const size = 600, center = size/2, radius = center - 10;
     const n = titulos.length, slice = 360 / (n || 1);
     const colors = useMemo(() => [
       '#e6194b','#f58231','#ffe119','#3cb44b','#42d4f4','#4363d8'
     ], []);
+
+    // Función para ajustar el tamaño del texto según la longitud
+    const getTextSize = (text, sliceAngle) => {
+      const maxLength = 12;
+      const minSize = 14; // Aumentado de 10 a 14
+      const maxSize = 20; // Aumentado de 16 a 20
+      
+      // Calcular tamaño basado en la longitud del texto y el tamaño del slice
+      const lengthFactor = Math.max(0.4, 1 - (text.length - maxLength) / 15);
+      const sliceFactor = Math.max(0.6, sliceAngle / 50);
+      
+      return Math.max(minSize, maxSize * lengthFactor * sliceFactor);
+    };
+
+    // Función para dividir texto largo en múltiples líneas
+    const wrapText = (text, maxLength = 10) => { // Reducido para líneas más cortas
+      if (text.length <= maxLength) return [text];
+      
+      const words = text.split(' ');
+      const lines = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        if ((currentLine + word).length <= maxLength) {
+          currentLine += (currentLine ? ' ' : '') + word;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      
+      // Si aún es muy largo, cortar palabras
+      return lines.map(line => {
+        if (line.length <= maxLength) return line;
+        return line.substring(0, maxLength - 3) + '...';
+      });
+    };
 
     const draw = useCallback(() => {
       const c = canvasRef.current;
       if (!c) return;
       const ctx = c.getContext('2d');
       ctx.clearRect(0,0,size,size);
+      
       for (let i = 0; i < n; i++) {
         const start = i*slice*Math.PI/180,
               end   = (i+1)*slice*Math.PI/180;
@@ -200,16 +228,35 @@ export default function RuletaIncidencias() {
         ctx.closePath();
         ctx.fillStyle = colors[i%colors.length];
         ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
-        // Texto
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); // Línea más gruesa
+        
+        // Texto mejorado
         const mid = (start + end)/2;
+        const texto = titulos[i] || '';
+        const textSize = getTextSize(texto, slice);
+        const lines = wrapText(texto, Math.max(6, Math.floor(15 - slice/12)));
+        
         ctx.save();
         ctx.translate(center,center);
         ctx.rotate(mid);
         ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px sans-serif';
+        ctx.font = `bold ${textSize}px Arial, sans-serif`; // Fuente más específica
         ctx.textAlign = 'center';
-        ctx.fillText(titulos[i]||'', radius*0.6, 8);
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 3; // Sombra más pronunciada
+        ctx.shadowOffsetX = 1;
+        ctx.shadowOffsetY = 1;
+        
+        // Dibujar múltiples líneas centradas
+        const lineHeight = textSize * 1.3;
+        const totalHeight = lines.length * lineHeight;
+        const startY = -totalHeight/2 + lineHeight/2;
+        
+        lines.forEach((line, lineIndex) => {
+          const y = startY + (lineIndex * lineHeight);
+          ctx.fillText(line, radius*0.65, y); // Más cerca del borde para mejor visibilidad
+        });
+        
         ctx.restore();
       }
     }, [titulos, slice, center, radius, colors, n]);
@@ -223,50 +270,201 @@ export default function RuletaIncidencias() {
     const spin = () => {
       if (spinning || n === 0) return;
       setSpinning(true);
-      const idx = Math.floor(Math.random() * n),
-            mid = idx*slice + slice/2,
-            vueltas = Math.floor(Math.random()*6)+3,
-            finalA = vueltas*360 - mid;
-      setSpinAngle(finalA);
+      setMostrandoResultado(false);
+      
+      // Algoritmo de giro más realista y variable
+      const minVueltas = 3;
+      const maxVueltas = 8;
+      const vueltas = Math.random() * (maxVueltas - minVueltas) + minVueltas;
+      
+      // Añadir variabilidad al ángulo final
+      const baseAngle = Math.random() * 360;
+      const variabilidad = (Math.random() - 0.5) * slice * 0.8;
+      const anguloFinal = baseAngle + variabilidad;
+      
+      const totalRotacion = vueltas * 360 + anguloFinal;
+      setSpinAngle(prev => prev + totalRotacion);
+      
       setTimeout(() => {
         setSpinning(false);
-        onDone(idx);
+        
+        // Calcular qué sección tocó el pointer considerando la variabilidad
+        const anguloNormalizado = (totalRotacion % 360);
+        const anguloPointer = (360 - anguloNormalizado) % 360;
+        const indiceSeleccionado = Math.floor(anguloPointer / slice) % n;
+        
+        // Mostrar resultado arriba de la ruleta
+        setResultadoTexto(titulos[indiceSeleccionado] || '');
+        setResultadoIndice(indiceSeleccionado);
+        setMostrandoResultado(true);
       }, 3500);
+    };
+
+    const continuarSiguienteRuleta = () => {
+      setMostrandoResultado(false);
+      onDone(resultadoIndice);
     };
 
     return (
       <div style={{ position:'relative', marginBottom:20 }}>
-        {/* Pointer siempre fijo, fuera del div giratorio */}
-        <div style={pointerStyle} />
-        {/* Rueda giratoria */}
-        <div style={{
-          width:size, height:size, borderRadius:'50%',
-          boxShadow:'0 0 10px rgba(0,0,0,0.3)',
-          transform:`rotate(${spinAngle}deg)`,
-          transition:'transform 3.5s ease-out'
+        {/* Contenedor de la ruleta con pointer pegado */}
+        <div style={{ 
+          position: 'relative', 
+          width: size, 
+          height: size,
+          margin: '0 auto'
         }}>
-          <canvas ref={canvasRef} width={size} height={size}
-            style={{ borderRadius:'50%', display:'block' }} />
-          {/* Centro blanco */}
+          {/* Pointer corregido - pegado al borde derecho de la ruleta */}
           <div style={{
-            position:'absolute', width:50, height:50,
-            background:'#fff', border:'4px solid #ddd',
-            borderRadius:'50%', top:'50%', left:'50%',
-            transform:'translate(-50%,-50%)',
-            zIndex:1
+            position: 'absolute',
+            top: '50%',
+            right: '-2px',
+            transform: 'translateY(-50%)',
+            width: 0,
+            height: 0,
+            borderTop: '20px solid transparent',
+            borderBottom: '20px solid transparent',
+            borderRight: '30px solid #d50000',
+            zIndex: 3
           }} />
+
+          {/* Rueda giratoria */}
+          <div style={{
+            width: size, 
+            height: size, 
+            borderRadius:'50%',
+            boxShadow:'0 0 10px rgba(0,0,0,0.3)',
+            transform:`rotate(${spinAngle}deg)`,
+            transition: spinning ? 'transform 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+          }}>
+            <canvas ref={canvasRef} width={size} height={size}
+              style={{ borderRadius:'50%', display:'block' }} />
+            {/* Centro blanco */}
+            <div style={{
+              position:'absolute', width:50, height:50,
+              background:'#fff', border:'4px solid #ddd',
+              borderRadius:'50%', top:'50%', left:'50%',
+              transform:'translate(-50%,-50%)',
+              zIndex:1
+            }} />
+          </div>
         </div>
 
+        {/* Modal de resultado elegante */}
+        {mostrandoResultado && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            animation: 'fadeIn 0.3s ease-out'
+          }}>
+            <div style={{
+              backgroundColor: 'white',
+              padding: '2.5rem',
+              borderRadius: '16px',
+              textAlign: 'center',
+              maxWidth: '500px',
+              width: '90%',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+              animation: 'modalSlideIn 0.4s ease-out'
+            }}>
+              <div style={{
+                fontSize: '3rem',
+                marginBottom: '1rem'
+              }}>
+                🎯
+              </div>
+              <h2 style={{
+                color: '#e53e3e',
+                marginBottom: '1.5rem',
+                fontSize: '1.5rem',
+                fontWeight: '700',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>
+                Resultado del Sorteo
+              </h2>
+              <div style={{
+                backgroundColor: '#f8f9fa',
+                padding: '1.5rem',
+                borderRadius: '12px',
+                margin: '1.5rem 0',
+                border: '3px solid #e53e3e'
+              }}>
+                <p style={{
+                  fontSize: '1.4rem',
+                  fontWeight: 'bold',
+                  color: '#2d3748',
+                  margin: 0,
+                  lineHeight: 1.4,
+                  wordWrap: 'break-word'
+                }}>
+                  {resultadoTexto}
+                </p>
+              </div>
+              <button
+                onClick={continuarSiguienteRuleta}
+                style={{
+                  backgroundColor: '#e53e3e',
+                  color: 'white',
+                  border: 'none',
+                  padding: '1rem 2rem',
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s ease',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#c53030';
+                  e.target.style.transform = 'translateY(-2px)';
+                  e.target.style.boxShadow = '0 6px 16px rgba(229, 62, 62, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#e53e3e';
+                  e.target.style.transform = 'translateY(0)';
+                  e.target.style.boxShadow = '0 4px 12px rgba(229, 62, 62, 0.3)';
+                }}
+              >
+                Siguiente Ruleta →
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Botón girar */}
-        <button className="wheel-button" disabled={spinning || n === 0}
+        <button 
+          className="wheel-button" 
+          disabled={spinning || n === 0 || mostrandoResultado}
           onClick={spin}
           style={{
-            ...botonEstilo,
-            display: 'block',       // para que margin auto funcione
-            margin: '20px auto 0'   // 20px arriba, centrado, 0 abajo
+            display: 'block',
+            margin: '30px auto 0',
+            padding: '1rem 2rem',
+            fontSize: '1.2rem',
+            fontWeight: '700',
+            backgroundColor: '#89ac76',
+            minWidth: '200px',
+            border: 'none',
+            borderRadius: '8px',
+            color: 'white',
+            cursor: spinning || mostrandoResultado ? 'not-allowed' : 'pointer',
+            transition: 'all 0.3s ease'
           }}
         >
-        {spinning ? 'Girando…' : n === 0 ? 'Sin opciones disponibles' : 'Girar ruleta'}
+          {spinning ? 'Girando…' : 
+           mostrandoResultado ? 'Ver resultado' : 
+           n === 0 ? 'Sin opciones disponibles' : 'Girar ruleta'}
         </button>
       </div>
     );
@@ -305,56 +503,8 @@ export default function RuletaIncidencias() {
 
   return (
     <div className="ruleta-container">
-      {/* Columna de Ruleta */}
-      <div style={{ width:520, minHeight:540 }}>
-        {fase === 0 && (
-          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
-            Selecciona un grupo para comenzar.
-          </div>
-        )}
-        {fase === 1 && (
-          <Wheel
-            titulos={categorias.map(c=>c.nombre)}
-            onDone={i=>{ setCatSel(categorias[i]); setIncSel(null); setMbrSel(null); setFase(2); }}
-          />
-        )}
-        {fase === 2 && (
-          <Wheel
-            titulos={incidencias.map(x=>x.descripcion)}
-            onDone={i=>{ setIncSel(incidencias[i]); setMbrSel(null); if(individual) setFase(3); }}
-          />
-        )}
-        {fase === 3 && individual && (
-          <Wheel
-            titulos={miembrosDisponibles.map(m=>`${m.nombre} ${m.apellido}`)}
-            onDone={i=>setMbrSel(miembrosDisponibles[i])}
-          />
-        )}
-        {fase === 4 && ruletaExtraActiva && (
-          <Wheel
-            titulos={gruposDisponibles.map(g=>g.nombre)}
-            onDone={i=>{
-              setGrupoExtraSel(gruposDisponibles[i]); 
-              setMbrExtraSel(null); 
-              setFase(5);
-            }}
-          />
-        )}
-        {fase === 5 && ruletaExtraActiva && (
-          <Wheel
-            titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
-            onDone={i=>setMbrExtraSel(miembrosExtra[i])}
-          />
-        )}
-      </div>
-
-      {/* Columna de Controles */}
-      <div style={{
-        maxWidth:300,
-        display:'flex',
-        flexDirection:'column',
-        gap:12
-      }}>
+      {/* Columna de controles */}
+      <div className="controls-column">
         {/* Grupo */}
         <label><strong>Grupo:</strong></label>
         <select
@@ -556,6 +706,49 @@ export default function RuletaIncidencias() {
                   display: 'block'}}>
                 Guardar Resultado
               </button>
+        )}
+      </div>
+
+      {/* Columna de la ruleta */}
+      <div className="ruleta-column">
+        {fase === 0 && (
+          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
+            Selecciona un grupo para comenzar.
+          </div>
+        )}
+        {fase === 1 && (
+          <Wheel
+            titulos={categorias.map(c=>c.nombre)}
+            onDone={i=>{ setCatSel(categorias[i]); setIncSel(null); setMbrSel(null); setFase(2); }}
+          />
+        )}
+        {fase === 2 && (
+          <Wheel
+            titulos={incidencias.map(x=>x.descripcion)}
+            onDone={i=>{ setIncSel(incidencias[i]); setMbrSel(null); if(individual) setFase(3); }}
+          />
+        )}
+        {fase === 3 && individual && (
+          <Wheel
+            titulos={miembrosDisponibles.map(m=>`${m.nombre} ${m.apellido}`)}
+            onDone={i=>setMbrSel(miembrosDisponibles[i])}
+          />
+        )}
+        {fase === 4 && ruletaExtraActiva && (
+          <Wheel
+            titulos={gruposDisponibles.map(g=>g.nombre)}
+            onDone={i=>{
+              setGrupoExtraSel(gruposDisponibles[i]); 
+              setMbrExtraSel(null); 
+              setFase(5);
+            }}
+          />
+        )}
+        {fase === 5 && ruletaExtraActiva && (
+          <Wheel
+            titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
+            onDone={i=>setMbrExtraSel(miembrosExtra[i])}
+          />
         )}
       </div>
     </div>
