@@ -1,47 +1,297 @@
 .menu-container {
-  font-family: 'Arial, sans-serif';
-  text-align: center;
-  padding: 40px;
+  min-height: calc(100vh - 80px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  font-family: 'Arial', sans-serif;
 }
 
 .menu-title {
-  font-size: 32px;
-  font-weight: bold;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
 .menu-user-section {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1.25rem;
+  background: white;
+  border-radius: 50px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.07);
 }
 
 .menu-user-name {
-  font-size: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4a5568;
 }
 
 .menu-user-icon {
-  width: 32px;
-  height: 32px;
-  background-color: #000;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
   border-radius: 50%;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 1.2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .menu-button-container {
-  margin-top: 50px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  max-width: 1100px;
+  width: 100%;
+  margin-top: 1rem;
 }
 
 .menu-button {
-  background-color: #c00;
-  color: #fff;
+  position: relative;
+  background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+  color: white;
   border: none;
-  padding: 45px 20px;
-  font-size: 21px;
-  border-radius: 5px;
+  padding: 1.5rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 12px;
   cursor: pointer;
-  width: 300px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+  overflow: hidden;
+  text-align: center;
+  min-height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.menu-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s;
+}
+
+.menu-button:hover::before {
+  left: 100%;
+}
+
+.menu-button:hover {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 6px 16px rgba(229, 62, 62, 0.4);
+  background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
+}
+
+.menu-button:active {
+  transform: translateY(-1px) scale(1.005);
+  transition: all 0.1s;
+}
+
+/* Iconos específicos para cada botón - más pequeños */
+.menu-button:nth-child(1)::after {
+  content: '🎯';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.menu-button:nth-child(2)::after {
+  content: '🎲';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.menu-button:nth-child(3)::after {
+  content: '📋';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.menu-button:nth-child(4)::after {
+  content: '⚙️';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.menu-button:nth-child(5)::after {
+  content: '📊';
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* Añadir información adicional en los botones */
+.menu-info-section {
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 1100px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.info-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.info-card h3 {
+  color: #2d3748;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.info-card p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Responsive optimizado */
+@media (max-width: 1024px) {
+  .menu-button-container {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    max-width: 900px;
+  }
+  
+  .menu-button::after {
+    font-size: 1.1rem;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .menu-container {
+    padding: 1rem;
+  }
+  
+  .menu-button-container {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    max-width: 500px;
+  }
+  
+  .menu-button {
+    padding: 1.25rem 0.75rem;
+    font-size: 0.9rem;
+    min-height: 80px;
+  }
+  
+  .menu-button::after {
+    font-size: 1rem;
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+  
+  .menu-title {
+    font-size: 1.75rem;
+    margin-bottom: 1rem;
+  }
+  
+  .info-card {
+    padding: 1rem;
+  }
+}
+
+/* Solución temporal para iconos solapados */
+@media (max-width: 768px) {
+  .menu-button::after {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .menu-button {
+    padding: 1rem 0.5rem !important;
+    font-size: 0.85rem !important;
+    min-height: 70px !important;
+  }
+  
+  .menu-button::after {
+    display: none !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .menu-button {
+    padding: 0.75rem 0.25rem;
+    font-size: 0.8rem;
+    min-height: 60px;
+    letter-spacing: 0.2px;
+  }
+  
+  .menu-button-container {
+    max-width: 280px;
+  }
+}
+
+/* Animación de entrada */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.menu-button {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.menu-button:nth-child(1) { animation-delay: 0.1s; }
+.menu-button:nth-child(2) { animation-delay: 0.2s; }
+.menu-button:nth-child(3) { animation-delay: 0.3s; }
+.menu-button:nth-child(4) { animation-delay: 0.4s; }
+.menu-button:nth-child(5) { animation-delay: 0.5s; }
+
+/* Estado de carga inicial */
+.menu-button {
+  opacity: 0;
+  animation-fill-mode: forwards;
 }
