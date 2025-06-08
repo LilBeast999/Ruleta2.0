@@ -48,7 +48,7 @@ function App() {
 
       {currentView === 'ruletaIncidencias' && (
         <main className="content">
-          <RuletaIncidencias />
+          <RuletaIncidencias onReturnToMenu={() => setCurrentView('menu')} />
         </main>
       )}
 

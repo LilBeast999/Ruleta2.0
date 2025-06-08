@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './RuletaIncidencias.css';
 
-export default function RuletaIncidencias() {
+export default function RuletaIncidencias({ onReturnToMenu }) {
   const [grupos, setGrupos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
@@ -508,9 +508,11 @@ export default function RuletaIncidencias() {
         throw new Error(err.error || 'Error desconocido');
       }
       alert('🎉 Sorteo y comentario guardados correctamente');
+      onReturnToMenu?.();
     } catch (e) {
       console.error(e);
       alert('⚠️ Error guardando sorteo/comentario: ' + e.message);
+      onReturnToMenu?.();
     }
   };
 
