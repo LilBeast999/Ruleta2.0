@@ -87,7 +87,7 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
       setEstudiantesExcluidos([]);
       setMostrarExclusion(false);
     }
-  }, [individual, fase, grupoSel]);
+  }, [individual, fase, grupoSel, incSel, mbrSel]);
 
   // Fase 5: miembros del grupo extra
   useEffect(() => {
@@ -126,11 +126,6 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
   const estudiantesParaExcluir = useMemo(() => {
     return miembros.filter(m => !estudiantesExcluidos.some(exc => exc.id === m.id));
   }, [miembros, estudiantesExcluidos]);
-
-  // Función para determinar si se debe mostrar la ruleta individual
-  const deberiaCargarMiembros = useMemo(() => {
-    return individual && grupoSel && incSel && (fase === 2 || fase >= 4);
-  }, [individual, grupoSel, incSel, fase]);
 
   // Función para activar la ruleta extra
   const activarRuletaExtra = () => {
