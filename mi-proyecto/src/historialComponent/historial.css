@@ -162,14 +162,14 @@
   background-color: #f9f9f9;
   padding: 15px;
   border-bottom: 1px solid #ddd;
-  text-align: left !important; /* Forzar alineación a la izquierda */
+  text-align: left;
 }
 
 /* Asegurar que los párrafos y contenido dentro del expandido esté alineado a la izquierda */
 .expanded-row p,
 .expanded-row div,
 .expanded-row span {
-  text-align: left !important;
+  text-align: left;
 }
 
 .historial-table tbody tr:nth-child(even) {
