@@ -42,7 +42,7 @@
 
 .historial-content {
   display: flex;
-  gap: 20px;
+  gap: 30px; /* Aumentado de 20px a 30px para más separación */
 }
 
 .filtros-panel {
@@ -91,8 +91,10 @@
 
 
 .results-container {
-  flex: 1; 
-  overflow: hidden; 
+  flex: 1;
+  overflow: visible;
+  padding-right: 20px; /* Aumentado de 10px a 20px */
+  padding-left: 10px; /* Agregado para balancear */
 }
 
 /* Tabla de resultados */
@@ -100,6 +102,7 @@
   width: 100%;
   border-collapse: collapse;
   border: 0px solid #ddd;
+  table-layout: fixed; /* Esto permite controlar mejor los anchos */
 }
 
 .historial-table thead tr {
@@ -114,6 +117,60 @@
   border-bottom: 1px solid #ddd;
 }
 
+/* Ajustar anchos específicos para cada columna */
+.historial-table th:nth-child(1),
+.historial-table td:nth-child(1) {
+  width: 10%; /* Grupo - más pequeño */
+}
+
+.historial-table th:nth-child(2),
+.historial-table td:nth-child(2) {
+  width: 15%; /* Tipo Incidente */
+}
+
+.historial-table th:nth-child(3),
+.historial-table td:nth-child(3) {
+  width: 35%; /* Incidente - el más ancho */
+}
+
+.historial-table th:nth-child(4),
+.historial-table td:nth-child(4) {
+  width: 12%; /* Fecha */
+}
+
+.historial-table th:nth-child(5),
+.historial-table td:nth-child(5) {
+  width: 18%; /* Comentario */
+}
+
+.historial-table th:nth-child(6),
+.historial-table td:nth-child(6) {
+  width: 10%; /* Individual - más espacio */
+}
+
+/* Última columna del botón */
+.historial-table th:last-child,
+.historial-table td:last-child {
+  width: 60px;
+  min-width: 60px;
+  text-align: center;
+  padding: 12px 8px;
+}
+
+/* Agregar esta regla para que el contenido expandido mantenga alineación a la izquierda */
+.expanded-row {
+  background-color: #f9f9f9;
+  padding: 15px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+/* Asegurar que los párrafos y contenido dentro del expandido esté alineado a la izquierda */
+.expanded-row p,
+.expanded-row div,
+.expanded-row span {
+  text-align: left;
+}
 
 .historial-table tbody tr:nth-child(even) {
   background-color: #f2f2f2;
@@ -128,11 +185,10 @@
   width: 30px;
   height: 30px;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: inline-block;
+  margin: 0 auto;
 }
 
 .expand-button.expanded {
@@ -148,8 +204,9 @@
 
 
 .table-container {
-  overflow: hidden;
+  overflow: visible;
   border-radius: 4px;
   border: 1px solid #ddd;
-  width: 100%; 
+  width: calc(100% - 20px); /* Reducido el ancho para dar espacio */
+  margin: 0 10px 0 0; /* Margen solo a la derecha */
 }

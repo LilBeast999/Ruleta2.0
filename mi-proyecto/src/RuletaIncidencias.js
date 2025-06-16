@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './RuletaIncidencias.css';
 
-export default function RuletaIncidencias() {
+export default function RuletaIncidencias({ onReturnToMenu }) {
   const [grupos, setGrupos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const [incidencias, setIncidencias] = useState([]);
@@ -67,7 +67,7 @@ export default function RuletaIncidencias() {
 
   // Fase 3: miembros (solo individual)
   useEffect(() => {
-    if (fase === 2 && individual && grupoSel) {
+    if (individual && grupoSel && incSel && fase === 3) {
       fetch(`http://localhost:5000/grupo/${grupoSel.id}`)
         .then(r => r.json())
         .then(data => {
@@ -79,7 +79,7 @@ export default function RuletaIncidencias() {
           }
         })
         .catch(() => setMiembros([]));
-    } else if (fase === 3 && !individual) {
+    } else if (!individual && (fase === 3 || (fase >= 4 && mbrSel))) {
       setFase(2);
       setMiembros([]);
       setMbrSel(null);
@@ -87,21 +87,28 @@ export default function RuletaIncidencias() {
       setEstudiantesExcluidos([]);
       setMostrarExclusion(false);
     }
-  }, [individual, fase, grupoSel]);
+  }, [individual, fase, grupoSel, incSel, mbrSel]);
 
   // Fase 5: miembros del grupo extra
   useEffect(() => {
     if (fase === 5 && grupoExtraSel) {
+      console.log('Cargando miembros del grupo extra:', grupoExtraSel);
       fetch(`http://localhost:5000/grupo/${grupoExtraSel.id}`)
         .then(r => r.json())
         .then(data => {
+          console.log('Respuesta del API:', data);
           if (Array.isArray(data.alumnos)) {
+            console.log('Miembros encontrados:', data.alumnos);
             setMiembrosExtra(data.alumnos);
           } else {
+            console.log('No se encontraron alumnos en la respuesta');
             setMiembrosExtra([]);
           }
         })
-        .catch(() => setMiembrosExtra([]));
+        .catch(error => {
+          console.error('Error cargando miembros extra:', error);
+          setMiembrosExtra([]);
+        });
     }
   }, [fase, grupoExtraSel]);
 
@@ -122,8 +129,9 @@ export default function RuletaIncidencias() {
 
   // Función para activar la ruleta extra
   const activarRuletaExtra = () => {
+    console.log('Activando ruleta extra, grupos disponibles:', gruposDisponibles);
     setRuletaExtraActiva(true);
-    setFase(4); // Ir a la fase de selección de grupo extra
+    setFase(4);
   };
 
   // Función para verificar si se pueden activar las opciones extra
@@ -495,9 +503,11 @@ export default function RuletaIncidencias() {
         throw new Error(err.error || 'Error desconocido');
       }
       alert('🎉 Sorteo y comentario guardados correctamente');
+      onReturnToMenu?.();
     } catch (e) {
       console.error(e);
       alert('⚠️ Error guardando sorteo/comentario: ' + e.message);
+      onReturnToMenu?.();
     }
   };
 
@@ -674,10 +684,16 @@ export default function RuletaIncidencias() {
               checked={individual}
               disabled={!incSel}
               onChange={e => {
-                setIndividual(e.target.checked);
-                if (!e.target.checked && fase === 3) {
+                const nuevoIndividual = e.target.checked;
+                setIndividual(nuevoIndividual);
+                
+                if (nuevoIndividual && incSel && grupoSel) {
+                  // Si se activa individual y ya hay incidencia, ir a cargar miembros
+                  setFase(3);
+                } else if (!nuevoIndividual) {
+                  // Si se desactiva individual, volver a fase 2
                   setFase(2);
-                  // Limpiar exclusiones al cambiar a grupal
+                  setMbrSel(null);
                   setEstudiantesExcluidos([]);
                   setMostrarExclusion(false);
                 }
@@ -725,7 +741,10 @@ export default function RuletaIncidencias() {
         {fase === 2 && (
           <Wheel
             titulos={incidencias.map(x=>x.descripcion)}
-            onDone={i=>{ setIncSel(incidencias[i]); setMbrSel(null); if(individual) setFase(3); }}
+            onDone={i=>{ 
+              setIncSel(incidencias[i]); 
+              setMbrSel(null); 
+            }}
           />
         )}
         {fase === 3 && individual && (
@@ -734,21 +753,37 @@ export default function RuletaIncidencias() {
             onDone={i=>setMbrSel(miembrosDisponibles[i])}
           />
         )}
-        {fase === 4 && ruletaExtraActiva && (
+        {fase === 4 && ruletaExtraActiva && gruposDisponibles.length > 0 && (
           <Wheel
             titulos={gruposDisponibles.map(g=>g.nombre)}
             onDone={i=>{
+              console.log('Grupo extra seleccionado:', gruposDisponibles[i]);
               setGrupoExtraSel(gruposDisponibles[i]); 
               setMbrExtraSel(null); 
               setFase(5);
             }}
           />
         )}
-        {fase === 5 && ruletaExtraActiva && (
+        
+        {/* AGREGA ESTA LÍNEA para mostrar cuando no hay grupos disponibles */}
+        {fase === 4 && ruletaExtraActiva && gruposDisponibles.length === 0 && (
+          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
+            No hay otros grupos disponibles para seleccionar.
+          </div>
+        )}
+        
+        {fase === 5 && ruletaExtraActiva && miembrosExtra.length > 0 && (
           <Wheel
             titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
             onDone={i=>setMbrExtraSel(miembrosExtra[i])}
           />
+        )}
+        
+        {/* AGREGA ESTA LÍNEA para mostrar cuando está cargando miembros */}
+        {fase === 5 && ruletaExtraActiva && miembrosExtra.length === 0 && (
+          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
+            Cargando miembros del grupo extra...
+          </div>
         )}
       </div>
     </div>
