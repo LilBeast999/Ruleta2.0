@@ -8,7 +8,6 @@ from app.models.proyecto import Proyecto
 from app.models.sorteo import Sorteo
 from app.models.comentario import Comentario
 from app import db
-import logging
 from sqlalchemy import text
 
 excel_bp = Blueprint('excel', __name__)
@@ -20,29 +19,23 @@ def clear_incidencias_data():
         comentarios_count = Comentario.query.count()
         if comentarios_count > 0:
             db.session.execute(text("DELETE FROM comentario"))
-            print(f"eliminados {comentarios_count} comentarios")
         
         sorteos_count = Sorteo.query.count()
         if sorteos_count > 0:
             db.session.execute(text("DELETE FROM sorteo"))
-            print(f"eliminados {sorteos_count} sorteos")
         
         incidencias_count = Incidencia.query.count()
         if incidencias_count > 0:
             db.session.execute(text("DELETE FROM incidencia"))
-            print(f"eliminadas {incidencias_count} incidencias")
         
         categorias_count = Categoria.query.count()
         if categorias_count > 0:
             db.session.execute(text("DELETE FROM categoria"))
-            print(f"eliminadas {categorias_count} categorías")
         
         db.session.commit()
-        print("limpieza de incidencias completada")
         return True
     except Exception as e:
         db.session.rollback()
-        print(f"error limpiando incidencias: {str(e)}")
         return False
 
 def clear_grupos_alumnos_data():
@@ -52,39 +45,31 @@ def clear_grupos_alumnos_data():
         comentarios_count = Comentario.query.count()
         if comentarios_count > 0:
             db.session.execute(text("DELETE FROM comentario"))
-            print(f"eliminados {comentarios_count} comentarios")
         
         sorteos_count = Sorteo.query.count()
         if sorteos_count > 0:
             db.session.execute(text("DELETE FROM sorteo"))
-            print(f"eliminados {sorteos_count} sorteos")
         
         alumnos_count = Alumno.query.count()
         if alumnos_count > 0:
             db.session.execute(text("DELETE FROM alumno"))
-            print(f"eliminados {alumnos_count} alumnos")
         
         grupos_count = Grupo.query.count()
         if grupos_count > 0:
             db.session.execute(text("DELETE FROM grupo"))
-            print(f"eliminados {grupos_count} grupos")
         
         proyectos_count = Proyecto.query.count()
         if proyectos_count > 0:
             db.session.execute(text("DELETE FROM proyecto"))
-            print(f"eliminados {proyectos_count} proyectos")
         
         db.session.commit()
-        print("limpieza de grupos y alumnos completada")
         return True
     except Exception as e:
         db.session.rollback()
-        print(f"error limpiando grupos/alumnos: {str(e)}")
         return False
 
 @excel_bp.route('/upload_excel_incidencias', methods=['POST'])
 def upload_excel_incidencias():
-    print("archivos recibidos:", list(request.files.keys()))
     if 'file' not in request.files:
         return jsonify({"error": "archivo no proporcionado"}), 400
 
@@ -94,12 +79,10 @@ def upload_excel_incidencias():
 
     # verificar si hay que limpiar datos
     clear_data = request.form.get('clearData', 'false').lower() == 'true'
-    print(f"limpiar datos: {clear_data}")
 
     try:
         # limpiar datos si se solicita
         if clear_data:
-            print("limpiando datos de incidencias...")
             if not clear_incidencias_data():
                 return jsonify({"error": "error al limpiar datos"}), 500
 
@@ -115,13 +98,11 @@ def upload_excel_incidencias():
                 conn.execute(text(f"ALTER SEQUENCE incidencia_id_seq RESTART WITH {max_inc_id + 1}"))
                 
                 conn.commit()
-                print(f"secuencias reiniciadas: categoria={max_cat_id + 1}, incidencia={max_inc_id + 1}")
         except Exception as seq_error:
-            print("error reiniciando secuencias:", str(seq_error))
+            pass
         
         df = pd.read_excel(file)
         df.columns = df.columns.str.lower().str.strip()
-        print("columnas:", df.columns.tolist())
 
         # validar que sea archivo de incidencias
         required_columns = ['categorias', 'subcategorias']
@@ -161,10 +142,8 @@ def upload_excel_incidencias():
                     categoria = Categoria(nombre=categoria_nombre)
                     db.session.add(categoria)
                     db.session.commit()
-                    print(f"categoría creada: {categoria_nombre}, id: {categoria.id}")
                     stats["categorias_creadas"] += 1
                 else:
-                    print(f"categoría existente: {categoria_nombre}, id: {categoria.id}")
                     stats["categorias_existentes"] += 1
 
                 categoria_id = categoria.id
@@ -183,16 +162,13 @@ def upload_excel_incidencias():
                     )
                     db.session.add(incidencia)
                     db.session.commit()
-                    print(f"incidencia creada: {subcategoria}")
                     stats["incidencias_creadas"] += 1
                 else:
-                    print(f"incidencia existente: {subcategoria}")
                     stats["incidencias_existentes"] += 1
             except Exception as row_error:
                 db.session.rollback()
                 error_msg = f"error en fila {index+1}: {str(row_error)}"
                 stats["errores"].append(error_msg)
-                logging.error(error_msg, exc_info=True)
                 
         if stats["errores"]:
             return jsonify({"message": "excel procesado con errores", "stats": stats}), 207
@@ -201,13 +177,11 @@ def upload_excel_incidencias():
 
     except Exception as e:
         db.session.rollback()
-        logging.error(f"error procesando excel: {str(e)}", exc_info=True)
         return jsonify({"error": f"error procesando excel: {str(e)}"}), 500
 
 
 @excel_bp.route('/upload_excel_grupos_alumnos', methods=['POST'])
 def upload_excel_grupos_alumnos():
-    print("archivos recibidos:", list(request.files.keys()))
     if 'file' not in request.files:
         return jsonify({"error": "archivo no proporcionado"}), 400
 
@@ -222,7 +196,6 @@ def upload_excel_grupos_alumnos():
     try:
         # limpiar datos si se solicita
         if clear_data:
-            print("limpiando datos de grupos y alumnos...")
             if not clear_grupos_alumnos_data():
                 return jsonify({"error": "error al limpiar datos"}), 500
 
@@ -235,7 +208,6 @@ def upload_excel_grupos_alumnos():
                     max_id = result.scalar() or 0
                     conn.execute(text(f"ALTER SEQUENCE {table}_id_seq RESTART WITH {max_id + 1}"))
                 conn.commit()
-                print("secuencias reiniciadas")
         except Exception as seq_error:
             print("error reiniciando secuencias:", str(seq_error))
         
@@ -286,7 +258,6 @@ def upload_excel_grupos_alumnos():
                             proyecto1 = Proyecto(nombre=nombre_proyecto1)
                             db.session.add(proyecto1)
                             db.session.commit()
-                            print(f"proyecto1 creado: {nombre_proyecto1}")
                             stats["proyectos_creados"] += 1
                         else:
                             stats["proyectos_existentes"] += 1
@@ -301,7 +272,6 @@ def upload_excel_grupos_alumnos():
                             proyecto2 = Proyecto(nombre=nombre_proyecto2)
                             db.session.add(proyecto2)
                             db.session.commit()
-                            print(f"proyecto2 creado: {nombre_proyecto2}")
                             stats["proyectos_creados"] += 1
                         else:
                             stats["proyectos_existentes"] += 1
@@ -317,7 +287,6 @@ def upload_excel_grupos_alumnos():
                     )
                     db.session.add(grupo)
                     db.session.commit()
-                    print(f"grupo creado: {nombre_grupo}")
                     stats["grupos_creados"] += 1
                 else:
                     # actualizar proyectos si es necesario
@@ -359,18 +328,15 @@ def upload_excel_grupos_alumnos():
                         )
                         db.session.add(alumno)
                         db.session.commit()
-                        print(f"alumno creado: {nombre} {apellido}")
                         stats["alumnos_creados"] += 1
                     except Exception as alumno_error:
                         db.session.rollback()
                         error_msg = f"error creando alumno '{nombre} {apellido}': {str(alumno_error)}"
                         stats["errores"].append(error_msg)
-                        logging.error(error_msg)
             except Exception as row_error:
                 db.session.rollback()
                 error_msg = f"error en fila {index+1}: {str(row_error)}"
                 stats["errores"].append(error_msg)
-                logging.error(error_msg, exc_info=True)
                 
         if stats["errores"]:
             return jsonify({"message": "excel procesado con errores", "stats": stats}), 207
@@ -378,5 +344,4 @@ def upload_excel_grupos_alumnos():
             return jsonify({"message": "excel procesado correctamente", "stats": stats}), 200
     except Exception as e:
         db.session.rollback()
-        logging.error(f"error procesando excel: {str(e)}", exc_info=True)
         return jsonify({"error": f"error procesando excel: {str(e)}"}), 500

@@ -560,6 +560,28 @@
   }
 }
 
+/* Responsive para tickets flotantes */
+@media (max-width: 768px) {
+  .select-with-tickets select {
+    padding-right: 2.5rem !important;
+  }
+  
+  .ticket-float {
+    font-size: 0.65rem !important;
+    padding: 0.1rem 0.25rem !important;
+  }
+}
+
+/* Responsive para tickets */
+@media (max-width: 768px) {
+  .sorteo-ticket {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    top: 0.4rem;
+    right: 0.4rem;
+  }
+}
+
 /* Responsive */
 @media (max-width: 1200px) {
   .ruleta-container {
@@ -639,4 +661,11 @@
     font-size: 0.8rem;
     padding: 6px 12px;
   }
+}
+
+/* Estilos para opciones de grupos que ya sortearon */
+.grupo-sorteado-option {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  font-weight: 600 !important;
 }

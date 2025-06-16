@@ -25,6 +25,9 @@ export default function RuletaIncidencias() {
   const [incidents, setIncidents] = useState([]);
   const [members, setMembers] = useState([]);
   const [extraMembers, setExtraMembers] = useState([]);
+  
+  // Nuevo estado para sorteos del día
+  const [sorteosHoy, setSorteosHoy] = useState([]);
 
   // Estados de carga
   const [loading, setLoading] = useState({
@@ -33,22 +36,38 @@ export default function RuletaIncidencias() {
     incidents: false,
     members: false,
     extraMembers: false,
-    saving: false
+    saving: false,
+    sorteosHoy: false
   });
 
   // Cargar grupos inicialmente
   useEffect(() => {
-    setLoading(prev => ({ ...prev, groups: true }));
-    fetch('http://localhost:5000/grupos')
-      .then(r => r.json())
-      .then(data => {
-        setGroups(Array.isArray(data) ? data : []);
-        setLoading(prev => ({ ...prev, groups: false }));
-      })
-      .catch(() => {
+    const cargarDatosIniciales = async () => {
+      setLoading(prev => ({ ...prev, groups: true, sorteosHoy: true }));
+      
+      try {
+        // Cargar grupos y sorteos del día en paralelo
+        const [gruposRes, sorteosHoyRes] = await Promise.all([
+          fetch('http://localhost:5000/grupos'),
+          fetch('http://localhost:5000/sorteos/hoy')
+        ]);
+        
+        const gruposData = await gruposRes.json();
+        const sorteosHoyData = await sorteosHoyRes.json();
+        
+        setGroups(Array.isArray(gruposData) ? gruposData : []);
+        setSorteosHoy(Array.isArray(sorteosHoyData) ? sorteosHoyData : []);
+        
+      } catch (error) {
+        console.error('Error cargando datos iniciales:', error);
         setGroups([]);
-        setLoading(prev => ({ ...prev, groups: false }));
-      });
+        setSorteosHoy([]);
+      } finally {
+        setLoading(prev => ({ ...prev, groups: false, sorteosHoy: false }));
+      }
+    };
+
+    cargarDatosIniciales();
   }, []);
 
   // Cargar categorías cuando pasa al paso de categorías
@@ -479,6 +498,10 @@ export default function RuletaIncidencias() {
         setSelectedExtraMember(extraMembers[index]);
         setCurrentStep('comment');
         break;
+      default:
+        // Caso default para satisfacer eslint
+        console.warn('Paso no reconocido:', currentStep);
+        break;
     }
   };
 
@@ -517,6 +540,11 @@ export default function RuletaIncidencias() {
     }, 4000);
   };
 
+  // Función para verificar si un grupo ya sorteó hoy
+  const getInfoSorteoHoy = (grupoId) => {
+    return sorteosHoy.find(sorteo => sorteo.id_grupo === grupoId);
+  };
+
   // Función para guardar sorteo
   const handleSave = async () => {
     setLoading(prev => ({ ...prev, saving: true }));
@@ -526,14 +554,17 @@ export default function RuletaIncidencias() {
       fullComment += ` | Grupo Extra: ${selectedExtraGroup.nombre} | Integrante Extra: ${selectedExtraMember.nombre} ${selectedExtraMember.apellido}`;
     }
     
+    const ahora = new Date();
+    const fechaLocal = new Date(ahora.getTime() - (ahora.getTimezoneOffset() * 60000));
+    
     const payload = {
       id_grupo: selectedGroup.id,
-      fecha: new Date().toISOString(),
+      fecha: fechaLocal.toISOString(),
       id_profesor: 4,
       id_incidencia: selectedIncident.id,
       id_alumno: selectedMember ? selectedMember.id : null,
       comentario: fullComment,
-      comentario_fecha: new Date().toISOString()
+      comentario_fecha: fechaLocal.toISOString()
     };
 
     try {
@@ -544,12 +575,21 @@ export default function RuletaIncidencias() {
       });
 
       if (!response.ok) {
-        throw new Error('Error al guardar');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al guardar');
       }
 
       showNotification('success', '🎉 ¡Sorteo guardado correctamente! Se ha registrado en el historial.');
       
-      // Reiniciar después de 2 segundos para que el usuario vea la notificación
+      // Actualizar sorteos del día después de guardar
+      try {
+        const sorteosHoyRes = await fetch('http://localhost:5000/sorteos/hoy');
+        const sorteosHoyData = await sorteosHoyRes.json();
+        setSorteosHoy(Array.isArray(sorteosHoyData) ? sorteosHoyData : []);
+      } catch (error) {
+        console.error('Error actualizando sorteos del día:', error);
+      }
+      
       setTimeout(() => {
         resetProcess();
       }, 2000);
@@ -714,7 +754,7 @@ export default function RuletaIncidencias() {
             }}>
               Selecciona un Grupo:
             </label>
-            {loading.groups ? (
+            {loading.groups || loading.sorteosHoy ? (
               <div style={{ 
                 padding: '1rem', 
                 textAlign: 'center', 
@@ -743,9 +783,25 @@ export default function RuletaIncidencias() {
                 }}
               >
                 <option value="">— Selecciona un grupo —</option>
-                {groups.map(g => (
-                  <option key={g.id} value={g.id}>{g.nombre}</option>
-                ))}
+                {groups.map(g => {
+                  const sorteoInfo = getInfoSorteoHoy(g.id);
+                  const yaSorteo = !!sorteoInfo;
+                  const label = yaSorteo ? `${g.nombre} ✅` : g.nombre;
+                  
+                  return (
+                    <option 
+                      key={g.id} 
+                      value={g.id}
+                      style={{ 
+                        backgroundColor: yaSorteo ? '#dcfce7' : 'white',
+                        color: yaSorteo ? '#166534' : 'inherit',
+                        fontWeight: yaSorteo ? '600' : 'normal'
+                      }}
+                    >
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
             )}
           </div>

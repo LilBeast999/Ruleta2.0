@@ -5,9 +5,10 @@ from app.models.incidencia import Incidencia
 from app.models.categoria import Categoria
 from app.models.comentario import Comentario
 from app.models.alumno import Alumno
-from app.models.profesor import Profesor  # asegúrate de importar el modelo
+from app.models.profesor import Profesor
 from app import db
-from datetime import datetime
+from datetime import datetime, date
+import pytz
 
 sorteo_bp = Blueprint('sorteo', __name__)
 
@@ -43,32 +44,71 @@ def crear_sorteo():
                 codigo_recuperacion="dummy"
             )
             db.session.add(dummy_profesor)
-            db.session.flush()  # asigna el id dummy
+            db.session.flush()
             id_profesor = dummy_profesor.id
 
     try:
-        fecha = datetime.fromisoformat(fecha_str)
+        # Manejo mejorado de fechas con zona horaria de Chile
+        chile_tz = pytz.timezone('America/Santiago')
+        
+        # Si no se proporciona fecha, usar la actual
+        if not fecha_str:
+            fecha = datetime.now(chile_tz)
+        else:
+            try:
+                # Intentar parsear la fecha ISO
+                if fecha_str.endswith('Z'):
+                    fecha_str = fecha_str[:-1] + '+00:00'
+                
+                fecha_utc = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
+                if fecha_utc.tzinfo is None:
+                    # Si no tiene zona horaria, asumir que es hora local de Chile
+                    fecha = chile_tz.localize(fecha_utc)
+                else:
+                    # Convertir a zona horaria de Chile
+                    fecha = fecha_utc.astimezone(chile_tz)
+                    
+            except (ValueError, TypeError) as e:
+                # Usar fecha actual como fallback
+                fecha = datetime.now(chile_tz)
+        
+        # Convertir a UTC para almacenar en base de datos
+        fecha_utc = fecha.astimezone(pytz.UTC)
+        
         nuevo_sorteo = Sorteo(
             id_grupo=id_grupo,
-            fecha=fecha,
+            fecha=fecha_utc.replace(tzinfo=None),  # Almacenar como naive UTC
             id_profesor=id_profesor,
             id_incidencia=id_incidencia,
             id_alumno=id_alumno
         )
         db.session.add(nuevo_sorteo)
-        db.session.flush()  # obtiene el id antes del commit
+        db.session.flush()
 
         # si se envía comentario, se crea su registro asociado
         if comentario_desc and comentario_fecha_str:
             try:
-                comentario_fecha = datetime.fromisoformat(comentario_fecha_str)
+                # Procesar fecha del comentario de la misma manera
+                if not comentario_fecha_str:
+                    comentario_fecha = datetime.now(chile_tz)
+                else:
+                    if comentario_fecha_str.endswith('Z'):
+                        comentario_fecha_str = comentario_fecha_str[:-1] + '+00:00'
+                    
+                    comentario_fecha_utc = datetime.fromisoformat(comentario_fecha_str.replace('Z', '+00:00'))
+                    if comentario_fecha_utc.tzinfo is None:
+                        comentario_fecha = chile_tz.localize(comentario_fecha_utc)
+                    else:
+                        comentario_fecha = comentario_fecha_utc.astimezone(chile_tz)
+                
+                comentario_fecha_utc = comentario_fecha.astimezone(pytz.UTC)
+                
             except Exception as e:
-                db.session.rollback()
-                return jsonify({"error": f"Formato de comentario_fecha inválido: {e}"}), 400
+                comentario_fecha_utc = datetime.now(pytz.UTC)
             
             nuevo_comentario = Comentario(
                 descripcion=comentario_desc,
-                fecha=comentario_fecha,
+                fecha=comentario_fecha_utc.replace(tzinfo=None),
                 id_sorteo=nuevo_sorteo.id
             )
             db.session.add(nuevo_comentario)
@@ -190,3 +230,56 @@ def obtener_sorteo_por_id(id):
         return jsonify(resultado), 200
     except Exception as e:
         return jsonify({"error": f"Error al obtener sorteo: {e}"}), 500
+
+@sorteo_bp.route('/sorteos/hoy', methods=['GET'])
+def obtener_sorteos_hoy():
+    """Obtiene todos los sorteos realizados hoy agrupados por grupo"""
+    try:
+        # Usar zona horaria de Chile para determinar "hoy"
+        chile_tz = pytz.timezone('America/Santiago')
+        ahora_chile = datetime.now(chile_tz)
+        hoy_chile = ahora_chile.date()
+        
+        # Convertir a UTC para consultar la base de datos
+        inicio_dia_chile = chile_tz.localize(datetime.combine(hoy_chile, datetime.min.time()))
+        fin_dia_chile = chile_tz.localize(datetime.combine(hoy_chile, datetime.max.time()))
+        
+        inicio_dia_utc = inicio_dia_chile.astimezone(pytz.UTC).replace(tzinfo=None)
+        fin_dia_utc = fin_dia_chile.astimezone(pytz.UTC).replace(tzinfo=None)
+        
+        # Consultar sorteos de hoy con información del grupo
+        sorteos_hoy = db.session.query(
+            Sorteo.id_grupo,
+            Grupo.nombre.label('grupo_nombre'),
+            db.func.count(Sorteo.id).label('cantidad_sorteos'),
+            db.func.max(Sorteo.fecha).label('ultimo_sorteo')
+        ).join(
+            Grupo, Sorteo.id_grupo == Grupo.id
+        ).filter(
+            Sorteo.fecha >= inicio_dia_utc,
+            Sorteo.fecha <= fin_dia_utc
+        ).group_by(
+            Sorteo.id_grupo, Grupo.nombre
+        ).all()
+        
+        resultado = []
+        for sorteo in sorteos_hoy:
+            # Convertir la fecha del último sorteo de UTC a hora de Chile
+            ultimo_sorteo_utc = sorteo.ultimo_sorteo
+            if ultimo_sorteo_utc:
+                ultimo_sorteo_utc = pytz.UTC.localize(ultimo_sorteo_utc)
+                ultimo_sorteo_chile = ultimo_sorteo_utc.astimezone(chile_tz)
+                ultimo_sorteo_iso = ultimo_sorteo_chile.isoformat()
+            else:
+                ultimo_sorteo_iso = None
+            
+            resultado.append({
+                'id_grupo': sorteo.id_grupo,
+                'grupo_nombre': sorteo.grupo_nombre,
+                'cantidad_sorteos': sorteo.cantidad_sorteos,
+                'ultimo_sorteo': ultimo_sorteo_iso
+            })
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"error": f"Error obteniendo sorteos de hoy: {str(e)}"}), 500
