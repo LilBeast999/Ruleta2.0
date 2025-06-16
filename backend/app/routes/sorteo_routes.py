@@ -8,7 +8,7 @@ from app.models.alumno import Alumno
 from app.models.profesor import Profesor
 from app import db
 from datetime import datetime, date
-import pytz
+from sqlalchemy import text
 
 sorteo_bp = Blueprint('sorteo', __name__)
 
@@ -48,36 +48,12 @@ def crear_sorteo():
             id_profesor = dummy_profesor.id
 
     try:
-        # Manejo mejorado de fechas con zona horaria de Chile
-        chile_tz = pytz.timezone('America/Santiago')
-        
-        # Si no se proporciona fecha, usar la actual
-        if not fecha_str:
-            fecha = datetime.now(chile_tz)
-        else:
-            try:
-                # Intentar parsear la fecha ISO
-                if fecha_str.endswith('Z'):
-                    fecha_str = fecha_str[:-1] + '+00:00'
-                
-                fecha_utc = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
-                if fecha_utc.tzinfo is None:
-                    # Si no tiene zona horaria, asumir que es hora local de Chile
-                    fecha = chile_tz.localize(fecha_utc)
-                else:
-                    # Convertir a zona horaria de Chile
-                    fecha = fecha_utc.astimezone(chile_tz)
-                    
-            except (ValueError, TypeError) as e:
-                # Usar fecha actual como fallback
-                fecha = datetime.now(chile_tz)
-        
-        # Convertir a UTC para almacenar en base de datos
-        fecha_utc = fecha.astimezone(pytz.UTC)
+        # Usar fecha actual sin zona horaria
+        ahora = datetime.now()
         
         nuevo_sorteo = Sorteo(
             id_grupo=id_grupo,
-            fecha=fecha_utc.replace(tzinfo=None),  # Almacenar como naive UTC
+            fecha=ahora,
             id_profesor=id_profesor,
             id_incidencia=id_incidencia,
             id_alumno=id_alumno
@@ -85,30 +61,13 @@ def crear_sorteo():
         db.session.add(nuevo_sorteo)
         db.session.flush()
 
-        # si se envía comentario, se crea su registro asociado
-        if comentario_desc and comentario_fecha_str:
-            try:
-                # Procesar fecha del comentario de la misma manera
-                if not comentario_fecha_str:
-                    comentario_fecha = datetime.now(chile_tz)
-                else:
-                    if comentario_fecha_str.endswith('Z'):
-                        comentario_fecha_str = comentario_fecha_str[:-1] + '+00:00'
-                    
-                    comentario_fecha_utc = datetime.fromisoformat(comentario_fecha_str.replace('Z', '+00:00'))
-                    if comentario_fecha_utc.tzinfo is None:
-                        comentario_fecha = chile_tz.localize(comentario_fecha_utc)
-                    else:
-                        comentario_fecha = comentario_fecha_utc.astimezone(chile_tz)
-                
-                comentario_fecha_utc = comentario_fecha.astimezone(pytz.UTC)
-                
-            except Exception as e:
-                comentario_fecha_utc = datetime.now(pytz.UTC)
+        # si se envía comentario, usar también fecha actual
+        if comentario_desc:
+            comentario_fecha = datetime.now()
             
             nuevo_comentario = Comentario(
                 descripcion=comentario_desc,
-                fecha=comentario_fecha_utc.replace(tzinfo=None),
+                fecha=comentario_fecha,
                 id_sorteo=nuevo_sorteo.id
             )
             db.session.add(nuevo_comentario)
@@ -173,7 +132,10 @@ def obtener_sorteos():
         for registro in registros:
             s, grupo, incidencia, categoria, comentario, alumno = registro
             comentario_texto = comentario.descripcion if comentario else ""
-            fecha_str = s.fecha.isoformat()
+            
+            # Formatear fecha como string directamente sin zona horaria
+            fecha_formateada = s.fecha.strftime("%Y-%m-%d %H:%M:%S")
+            
             # Se agrega el alumno solo si existe
             alumno_data = {
                 "id": alumno.id,
@@ -186,7 +148,7 @@ def obtener_sorteos():
                 "grupo": grupo.nombre,
                 "tipoIncidente": categoria.nombre,
                 "incidente": incidencia.descripcion,
-                "fecha": fecha_str,
+                "fecha": fecha_formateada,
                 "comentario": comentario_texto,
                 "expandido": False,
                 "alumno": alumno_data
@@ -205,7 +167,7 @@ def obtener_sorteo_por_id(id):
 
         resultado = {
             "id": sorteo.id,
-            "fecha": sorteo.fecha.isoformat(),
+            "fecha": sorteo.fecha.strftime("%Y-%m-%d %H:%M:%S"),
             "grupo": {
                 "id": sorteo.grupo.id,
                 "nombre": sorteo.grupo.nombre
@@ -235,17 +197,12 @@ def obtener_sorteo_por_id(id):
 def obtener_sorteos_hoy():
     """Obtiene todos los sorteos realizados hoy agrupados por grupo"""
     try:
-        # Usar zona horaria de Chile para determinar "hoy"
-        chile_tz = pytz.timezone('America/Santiago')
-        ahora_chile = datetime.now(chile_tz)
-        hoy_chile = ahora_chile.date()
+        # Usar fecha actual del servidor para determinar "hoy"
+        hoy = date.today()
         
-        # Convertir a UTC para consultar la base de datos
-        inicio_dia_chile = chile_tz.localize(datetime.combine(hoy_chile, datetime.min.time()))
-        fin_dia_chile = chile_tz.localize(datetime.combine(hoy_chile, datetime.max.time()))
-        
-        inicio_dia_utc = inicio_dia_chile.astimezone(pytz.UTC).replace(tzinfo=None)
-        fin_dia_utc = fin_dia_chile.astimezone(pytz.UTC).replace(tzinfo=None)
+        # Crear rangos de tiempo para el día actual
+        inicio_dia = datetime.combine(hoy, datetime.min.time())
+        fin_dia = datetime.combine(hoy, datetime.max.time())
         
         # Consultar sorteos de hoy con información del grupo
         sorteos_hoy = db.session.query(
@@ -256,30 +213,60 @@ def obtener_sorteos_hoy():
         ).join(
             Grupo, Sorteo.id_grupo == Grupo.id
         ).filter(
-            Sorteo.fecha >= inicio_dia_utc,
-            Sorteo.fecha <= fin_dia_utc
+            Sorteo.fecha >= inicio_dia,
+            Sorteo.fecha <= fin_dia
         ).group_by(
             Sorteo.id_grupo, Grupo.nombre
         ).all()
         
         resultado = []
         for sorteo in sorteos_hoy:
-            # Convertir la fecha del último sorteo de UTC a hora de Chile
-            ultimo_sorteo_utc = sorteo.ultimo_sorteo
-            if ultimo_sorteo_utc:
-                ultimo_sorteo_utc = pytz.UTC.localize(ultimo_sorteo_utc)
-                ultimo_sorteo_chile = ultimo_sorteo_utc.astimezone(chile_tz)
-                ultimo_sorteo_iso = ultimo_sorteo_chile.isoformat()
-            else:
-                ultimo_sorteo_iso = None
+            # Formatear fecha como string
+            ultimo_sorteo_str = None
+            if sorteo.ultimo_sorteo:
+                ultimo_sorteo_str = sorteo.ultimo_sorteo.strftime("%Y-%m-%d %H:%M:%S")
             
             resultado.append({
                 'id_grupo': sorteo.id_grupo,
                 'grupo_nombre': sorteo.grupo_nombre,
                 'cantidad_sorteos': sorteo.cantidad_sorteos,
-                'ultimo_sorteo': ultimo_sorteo_iso
+                'ultimo_sorteo': ultimo_sorteo_str
             })
         
         return jsonify(resultado), 200
     except Exception as e:
         return jsonify({"error": f"Error obteniendo sorteos de hoy: {str(e)}"}), 500
+
+@sorteo_bp.route('/sorteos/clear-all', methods=['DELETE'])
+def eliminar_todos_sorteos():
+    """Elimina todos los sorteos y comentarios de la base de datos"""
+    try:
+        # Eliminar en orden de dependencias
+        comentarios_eliminados = Comentario.query.count()
+        if comentarios_eliminados > 0:
+            db.session.execute(text("DELETE FROM comentario"))
+        
+        sorteos_eliminados = Sorteo.query.count()
+        if sorteos_eliminados > 0:
+            db.session.execute(text("DELETE FROM sorteo"))
+        
+        # Reiniciar secuencias de IDs
+        try:
+            db.session.execute(text("ALTER SEQUENCE sorteo_id_seq RESTART WITH 1"))
+            db.session.execute(text("ALTER SEQUENCE comentario_id_seq RESTART WITH 1"))
+        except Exception as seq_error:
+            print(f"Advertencia al reiniciar secuencias: {seq_error}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Todos los sorteos eliminados correctamente",
+            "stats": {
+                "sorteos_eliminados": sorteos_eliminados,
+                "comentarios_eliminados": comentarios_eliminados
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error eliminando sorteos: {str(e)}"}), 500

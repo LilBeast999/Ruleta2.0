@@ -554,17 +554,14 @@ export default function RuletaIncidencias() {
       fullComment += ` | Grupo Extra: ${selectedExtraGroup.nombre} | Integrante Extra: ${selectedExtraMember.nombre} ${selectedExtraMember.apellido}`;
     }
     
-    const ahora = new Date();
-    const fechaLocal = new Date(ahora.getTime() - (ahora.getTimezoneOffset() * 60000));
-    
     const payload = {
       id_grupo: selectedGroup.id,
-      fecha: fechaLocal.toISOString(),
+      fecha: new Date().toISOString(), // Solo para cumplir con el backend, se ignorará
       id_profesor: 4,
       id_incidencia: selectedIncident.id,
       id_alumno: selectedMember ? selectedMember.id : null,
       comentario: fullComment,
-      comentario_fecha: fechaLocal.toISOString()
+      comentario_fecha: new Date().toISOString() // Solo para cumplir con el backend, se ignorará
     };
 
     try {
