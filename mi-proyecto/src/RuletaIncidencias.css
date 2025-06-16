@@ -126,19 +126,19 @@
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: #89ac76;
+  background: #e53e3e;
   color: white;
-  box-shadow: 0 2px 4px rgba(66, 153, 225, 0.3);
+  box-shadow: 0 2px 4px rgba(229, 62, 62, 0.3);
 }
 
 .wheel-button:hover {
-  background: #89ac76;
+  background: #dc2626;
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(66, 153, 225, 0.3);
+  box-shadow: 0 4px 6px rgba(229, 62, 62, 0.4);
 }
 
 .wheel-button:disabled {
-  background: #63b3ed;
+  background: #9ca3af;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
@@ -192,7 +192,7 @@
   }
 }
 
-/* Animaciones para el modal */
+/* Animaciones mejoradas */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -209,12 +209,380 @@
   }
 }
 
-/* Mejoras adicionales para la ruleta */
-.resultado-destacado {
-  animation: resultadoEntrada 0.5s ease-out;
+@keyframes pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1; 
+  }
+  50% { 
+    transform: scale(1.05);
+    opacity: 0.8; 
+  }
 }
 
-/* Responsive para evitar solapamiento */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+@keyframes bounceIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* Animaciones específicas para los indicadores */
+.result-indicator {
+  animation: fadeInScale 0.5s ease-out;
+}
+
+.continue-indicator {
+  animation: bounceIn 0.6s ease-out;
+}
+
+/* Mejoras para el botón central */
+.center-spin-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 4px solid #fff;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  z-index: 4;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.center-spin-button:hover:not(:disabled) {
+  transform: translate(-50%, -50%) scale(1.05);
+  box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+}
+
+.center-spin-button:disabled {
+  cursor: not-allowed;
+}
+
+/* Estados del botón */
+.center-spin-button.spinning {
+  background: linear-gradient(45deg, #9ca3af, #6b7280);
+  animation: spin 2s linear infinite;
+}
+
+.center-spin-button.waiting {
+  background: linear-gradient(45deg, #f59e0b, #d97706);
+}
+
+.center-spin-button.ready {
+  background: linear-gradient(45deg, #10b981, #059669);
+  animation: pulse 2s infinite;
+}
+
+.center-spin-button.default {
+  background: linear-gradient(45deg, #e53e3e, #dc2626);
+}
+
+/* Nuevos estilos para el flujo guiado */
+.guided-ruleta-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: calc(100vh - 120px);
+}
+
+.progress-indicator {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 3rem;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 1rem;
+  position: relative;
+}
+
+.progress-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 100%;
+  width: 2rem;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.progress-step.completed:not(:last-child)::after {
+  background: #10b981;
+}
+
+.step-number {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #e2e8f0;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.progress-step.completed .step-number {
+  background: #10b981;
+  color: white;
+}
+
+.progress-step.active .step-number {
+  background: #e53e3e;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.step-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-align: center;
+}
+
+.progress-step.completed .step-label {
+  color: #10b981;
+}
+
+.progress-step.active .step-label {
+  color: #e53e3e;
+}
+
+.step-container {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.step-container h2 {
+  color: #2d3748;
+  margin-bottom: 1.5rem;
+  font-size: 1.8rem;
+}
+
+.group-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.group-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.group-card:hover {
+  border-color: #e53e3e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(229, 62, 62, 0.2);
+}
+
+.group-card h3 {
+  color: #2d3748;
+  margin: 0 0 1rem 0;
+  font-size: 1.3rem;
+}
+
+.group-info p {
+  margin: 0.5rem 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.path-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.path-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.path-card:hover {
+  border-color: #e53e3e;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(229, 62, 62, 0.2);
+}
+
+.path-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.path-card h3 {
+  color: #2d3748;
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+}
+
+.path-card p {
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.comment-section {
+  margin: 2rem 0;
+  text-align: left;
+}
+
+.comment-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.final-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #6b7280;
+}
+
+/* Animaciones para notificaciones */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Mejoras para el botón de guardar */
+.save-button-loading {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animación de pulso para éxito */
+@keyframes successPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+/* Responsive para tickets flotantes */
+@media (max-width: 768px) {
+  .select-with-tickets select {
+    padding-right: 2.5rem !important;
+  }
+  
+  .ticket-float {
+    font-size: 0.65rem !important;
+    padding: 0.1rem 0.25rem !important;
+  }
+}
+
+/* Responsive para tickets */
+@media (max-width: 768px) {
+  .sorteo-ticket {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.4rem;
+    top: 0.4rem;
+    right: 0.4rem;
+  }
+}
+
+/* Responsive */
 @media (max-width: 1200px) {
   .ruleta-container {
     flex-direction: column;
@@ -249,4 +617,55 @@
     flex: 0 0 auto;
     width: 100%;
   }
+  
+  .guided-ruleta-container {
+    padding: 1rem;
+  }
+  
+  .progress-indicator {
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .progress-step {
+    margin: 0 0.5rem;
+  }
+  
+  .progress-step:not(:last-child)::after {
+    width: 1rem;
+  }
+  
+  .step-container {
+    padding: 1.5rem;
+  }
+  
+  .group-grid,
+  .path-options {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .final-actions {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .center-spin-button {
+    width: 70px;
+    height: 70px;
+    font-size: 0.8rem;
+  }
+  
+  .pause-indicator {
+    font-size: 0.8rem;
+    padding: 6px 12px;
+  }
+}
+
+/* Estilos para opciones de grupos que ya sortearon */
+.grupo-sorteado-option {
+  background-color: #dcfce7 !important;
+  color: #166534 !important;
+  font-weight: 600 !important;
 }

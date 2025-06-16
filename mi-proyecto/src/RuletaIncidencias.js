@@ -2,183 +2,154 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './RuletaIncidencias.css';
 
-export default function RuletaIncidencias({ onReturnToMenu }) {
-  const [grupos, setGrupos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
-  const [incidencias, setIncidencias] = useState([]);
-  const [miembros, setMiembros] = useState([]);
-  const [miembrosExtra, setMiembrosExtra] = useState([]);
+export default function RuletaIncidencias() {
+  // Estados del flujo paso a paso
+  const [currentStep, setCurrentStep] = useState('group'); // 'group', 'category', 'incident', 'choose-path', 'individual', 'extra-group', 'extra-individual', 'comment'
+  
+  // Estados de selección
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedIncident, setSelectedIncident] = useState(null);
+  const [selectedMember, setSelectedMember] = useState(null);
+  const [selectedExtraGroup, setSelectedExtraGroup] = useState(null);
+  const [selectedExtraMember, setSelectedExtraMember] = useState(null);
+  const [selectedPath, setSelectedPath] = useState(null); // 'simple', 'individual', 'extra'
+  const [comment, setComment] = useState('');
+  
+  // Nuevo estado para notificaciones
+  const [notification, setNotification] = useState({ show: false, type: '', message: '' });
 
-  const [fase, setFase] = useState(0); // 0=inicio,1=categorías,2=incidencias,3=miembros,4=grupoExtra,5=miembrosExtra
-  const [grupoSel, setGrupoSel] = useState(null);
-  const [catSel, setCatSel] = useState(null);
-  const [incSel, setIncSel] = useState(null);
-  const [mbrSel, setMbrSel] = useState(null);
+  // Estados de datos
+  const [groups, setGroups] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [incidents, setIncidents] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [extraMembers, setExtraMembers] = useState([]);
+  
+  // Nuevo estado para sorteos del día
+  const [sorteosHoy, setSorteosHoy] = useState([]);
 
-  // Nuevos estados para ruleta grupal extra
-  const [grupoExtraSel, setGrupoExtraSel] = useState(null);
-  const [mbrExtraSel, setMbrExtraSel] = useState(null);
-  const [ruletaExtraActiva, setRuletaExtraActiva] = useState(false);
+  // Estados de carga
+  const [loading, setLoading] = useState({
+    groups: true,
+    categories: false,
+    incidents: false,
+    members: false,
+    extraMembers: false,
+    saving: false,
+    sorteosHoy: false
+  });
 
-  // Nuevos estados para exclusión de estudiantes
-  const [mostrarExclusion, setMostrarExclusion] = useState(false);
-  const [estudiantesExcluidos, setEstudiantesExcluidos] = useState([]);
-
-  const [individual, setIndividual] = useState(false);
-  const [comentario, setComentario] = useState('');
-
-  const botonEstilo = {
-    padding: '12px 24px',
-    fontSize: '1rem',
-    borderRadius: 6,
-    cursor: 'pointer',
-    marginTop: 20,
-    fontWeight: 600,
-    transition: 'all 0.2s ease',
-  };
-
-  // Carga inicial de grupos
+  // Cargar grupos inicialmente
   useEffect(() => {
-    fetch('http://localhost:5000/grupos')
-      .then(r => r.json())
-      .then(data => Array.isArray(data) ? setGrupos(data) : setGrupos([]))
-      .catch(() => setGrupos([]));
+    const cargarDatosIniciales = async () => {
+      setLoading(prev => ({ ...prev, groups: true, sorteosHoy: true }));
+      
+      try {
+        // Cargar grupos y sorteos del día en paralelo
+        const [gruposRes, sorteosHoyRes] = await Promise.all([
+          fetch('http://localhost:5000/grupos'),
+          fetch('http://localhost:5000/sorteos/hoy')
+        ]);
+        
+        const gruposData = await gruposRes.json();
+        const sorteosHoyData = await sorteosHoyRes.json();
+        
+        setGroups(Array.isArray(gruposData) ? gruposData : []);
+        setSorteosHoy(Array.isArray(sorteosHoyData) ? sorteosHoyData : []);
+        
+      } catch (error) {
+        console.error('Error cargando datos iniciales:', error);
+        setGroups([]);
+        setSorteosHoy([]);
+      } finally {
+        setLoading(prev => ({ ...prev, groups: false, sorteosHoy: false }));
+      }
+    };
+
+    cargarDatosIniciales();
   }, []);
 
-  // Fase 1: categorías
+  // Cargar categorías cuando pasa al paso de categorías
   useEffect(() => {
-    if (fase === 1) {
+    if (currentStep === 'category') {
+      setLoading(prev => ({ ...prev, categories: true }));
       fetch('http://localhost:5000/categorias')
         .then(r => r.json())
-        .then(data => Array.isArray(data) ? setCategorias(data) : setCategorias([]))
-        .catch(() => setCategorias([]));
-    }
-  }, [fase]);
-
-  // Fase 2: incidencias
-  useEffect(() => {
-    if (fase === 2 && catSel) {
-      fetch(`http://localhost:5000/incidencias/categoria/${catSel.id}`)
-        .then(r => r.json())
-        .then(data => Array.isArray(data) ? setIncidencias(data) : setIncidencias([]))
-        .catch(() => setIncidencias([]));
-    }
-  }, [fase, catSel]);
-
-  // Fase 3: miembros (solo individual)
-  useEffect(() => {
-    if (individual && grupoSel && incSel && fase === 3) {
-      fetch(`http://localhost:5000/grupo/${grupoSel.id}`)
-        .then(r => r.json())
         .then(data => {
-          if (Array.isArray(data.alumnos)) {
-            setMiembros(data.alumnos);
-            setFase(3);
-          } else {
-            setMiembros([]);
-          }
+          setCategories(Array.isArray(data) ? data : []);
+          setLoading(prev => ({ ...prev, categories: false }));
         })
-        .catch(() => setMiembros([]));
-    } else if (!individual && (fase === 3 || (fase >= 4 && mbrSel))) {
-      setFase(2);
-      setMiembros([]);
-      setMbrSel(null);
-      // Limpiar exclusiones cuando no es individual
-      setEstudiantesExcluidos([]);
-      setMostrarExclusion(false);
-    }
-  }, [individual, fase, grupoSel, incSel, mbrSel]);
-
-  // Fase 5: miembros del grupo extra
-  useEffect(() => {
-    if (fase === 5 && grupoExtraSel) {
-      console.log('Cargando miembros del grupo extra:', grupoExtraSel);
-      fetch(`http://localhost:5000/grupo/${grupoExtraSel.id}`)
-        .then(r => r.json())
-        .then(data => {
-          console.log('Respuesta del API:', data);
-          if (Array.isArray(data.alumnos)) {
-            console.log('Miembros encontrados:', data.alumnos);
-            setMiembrosExtra(data.alumnos);
-          } else {
-            console.log('No se encontraron alumnos en la respuesta');
-            setMiembrosExtra([]);
-          }
-        })
-        .catch(error => {
-          console.error('Error cargando miembros extra:', error);
-          setMiembrosExtra([]);
+        .catch(() => {
+          setCategories([]);
+          setLoading(prev => ({ ...prev, categories: false }));
         });
     }
-  }, [fase, grupoExtraSel]);
+  }, [currentStep]);
 
-  // Función para obtener grupos disponibles (excluyendo el grupo seleccionado)
-  const gruposDisponibles = useMemo(() => {
-    return grupos.filter(g => g.id !== grupoSel?.id);
-  }, [grupos, grupoSel]);
-
-  // Función para obtener miembros disponibles (excluyendo los excluidos)
-  const miembrosDisponibles = useMemo(() => {
-    return miembros.filter(m => !estudiantesExcluidos.some(exc => exc.id === m.id));
-  }, [miembros, estudiantesExcluidos]);
-
-  // Función para obtener estudiantes que pueden ser excluidos
-  const estudiantesParaExcluir = useMemo(() => {
-    return miembros.filter(m => !estudiantesExcluidos.some(exc => exc.id === m.id));
-  }, [miembros, estudiantesExcluidos]);
-
-  // Función para activar la ruleta extra
-  const activarRuletaExtra = () => {
-    console.log('Activando ruleta extra, grupos disponibles:', gruposDisponibles);
-    setRuletaExtraActiva(true);
-    setFase(4);
-  };
-
-  // Función para verificar si se pueden activar las opciones extra
-  const puedeActivarExtra = () => {
-    return incSel && (!individual || mbrSel);
-  };
-
-  // Función para excluir un estudiante
-  const excluirEstudiante = (estudianteId) => {
-    const estudiante = miembros.find(m => m.id === parseInt(estudianteId));
-    if (estudiante && !estudiantesExcluidos.some(exc => exc.id === estudiante.id)) {
-      setEstudiantesExcluidos(prev => [...prev, estudiante]);
-      // Si el estudiante seleccionado es excluido, limpiarlo
-      if (mbrSel && mbrSel.id === estudiante.id) {
-        setMbrSel(null);
-      }
+  // Cargar incidencias cuando se selecciona categoría
+  useEffect(() => {
+    if (currentStep === 'incident' && selectedCategory) {
+      setLoading(prev => ({ ...prev, incidents: true }));
+      fetch(`http://localhost:5000/incidencias/categoria/${selectedCategory.id}`)
+        .then(r => r.json())
+        .then(data => {
+          setIncidents(Array.isArray(data) ? data : []);
+          setLoading(prev => ({ ...prev, incidents: false }));
+        })
+        .catch(() => {
+          setIncidents([]);
+          setLoading(prev => ({ ...prev, incidents: false }));
+        });
     }
-    setMostrarExclusion(false);
-  };
+  }, [currentStep, selectedCategory]);
 
-  // Función para reincluir un estudiante excluido
-  const reincluirEstudiante = (estudianteId) => {
-    setEstudiantesExcluidos(prev => prev.filter(exc => exc.id !== estudianteId));
-  };
-
-  // Función para construir el comentario completo con datos extra
-  const construirComentarioCompleto = () => {
-    let comentarioCompleto = comentario.trim() || 'No hay comentario registrado';
-    
-    if (grupoExtraSel && mbrExtraSel) {
-      comentarioCompleto += ` | Grupo Extra: ${grupoExtraSel.nombre} | Integrante Extra: ${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`;
+  // Cargar miembros cuando se necesita para sorteo individual
+  useEffect(() => {
+    if (currentStep === 'individual' && selectedGroup && !members.length) {
+      setLoading(prev => ({ ...prev, members: true }));
+      fetch(`http://localhost:5000/grupo/${selectedGroup.id}`)
+        .then(r => r.json())
+        .then(data => {
+          setMembers(Array.isArray(data.alumnos) ? data.alumnos : []);
+          setLoading(prev => ({ ...prev, members: false }));
+        })
+        .catch(() => {
+          setMembers([]);
+          setLoading(prev => ({ ...prev, members: false }));
+        });
     }
-    
-    return comentarioCompleto;
-  };
+  }, [currentStep, selectedGroup, members.length]);
 
-  // Rueda genérica mejorada
-  function Wheel({ titulos = [], onDone }) {
+  // Cargar miembros del grupo extra
+  useEffect(() => {
+    if (currentStep === 'extra-individual' && selectedExtraGroup) {
+      setLoading(prev => ({ ...prev, extraMembers: true }));
+      fetch(`http://localhost:5000/grupo/${selectedExtraGroup.id}`)
+        .then(r => r.json())
+        .then(data => {
+          setExtraMembers(Array.isArray(data.alumnos) ? data.alumnos : []);
+          setLoading(prev => ({ ...prev, extraMembers: false }));
+        })
+        .catch(() => {
+          setExtraMembers([]);
+          setLoading(prev => ({ ...prev, extraMembers: false }));
+        });
+    }
+  }, [currentStep, selectedExtraGroup]);
+
+  // Componente de ruleta reutilizable
+  function Wheel({ titles = [], onResult, isLoading = false }) {
     const canvasRef = useRef(null);
     const [spinAngle, setSpinAngle] = useState(0);
     const [spinning, setSpinning] = useState(false);
-    const [mostrandoResultado, setMostrandoResultado] = useState(false);
-    const [resultadoTexto, setResultadoTexto] = useState('');
-    const [resultadoIndice, setResultadoIndice] = useState(null);
+    const [showResult, setShowResult] = useState(false);
+    const [resultText, setResultText] = useState('');
+    const [resultIndex, setResultIndex] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false); // Nuevo estado para prevenir clics múltiples
 
     const size = 600, center = size/2, radius = center - 10;
-    const n = titulos.length, slice = 360 / (n || 1);
+    const n = titles.length, slice = 360 / (n || 1);
     const colors = useMemo(() => [
       '#e6194b','#f58231','#ffe119','#3cb44b','#42d4f4','#4363d8'
     ], []);
@@ -186,24 +157,19 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
     // Función para ajustar el tamaño del texto según la longitud
     const getTextSize = (text, sliceAngle) => {
       const maxLength = 12;
-      const minSize = 14; // Aumentado de 10 a 14
-      const maxSize = 20; // Aumentado de 16 a 20
-      
-      // Calcular tamaño basado en la longitud del texto y el tamaño del slice
+      const minSize = 14;
+      const maxSize = 20;
       const lengthFactor = Math.max(0.4, 1 - (text.length - maxLength) / 15);
       const sliceFactor = Math.max(0.6, sliceAngle / 50);
-      
       return Math.max(minSize, maxSize * lengthFactor * sliceFactor);
     };
 
     // Función para dividir texto largo en múltiples líneas
-    const wrapText = (text, maxLength = 10) => { // Reducido para líneas más cortas
+    const wrapText = (text, maxLength = 10) => {
       if (text.length <= maxLength) return [text];
-      
       const words = text.split(' ');
       const lines = [];
       let currentLine = '';
-      
       for (const word of words) {
         if ((currentLine + word).length <= maxLength) {
           currentLine += (currentLine ? ' ' : '') + word;
@@ -213,8 +179,6 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
         }
       }
       if (currentLine) lines.push(currentLine);
-      
-      // Si aún es muy largo, cortar palabras
       return lines.map(line => {
         if (line.length <= maxLength) return line;
         return line.substring(0, maxLength - 3) + '...';
@@ -236,11 +200,10 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
         ctx.closePath();
         ctx.fillStyle = colors[i%colors.length];
         ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke(); // Línea más gruesa
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
         
-        // Texto mejorado
         const mid = (start + end)/2;
-        const texto = titulos[i] || '';
+        const texto = titles[i] || '';
         const textSize = getTextSize(texto, slice);
         const lines = wrapText(texto, Math.max(6, Math.floor(15 - slice/12)));
         
@@ -248,81 +211,92 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
         ctx.translate(center,center);
         ctx.rotate(mid);
         ctx.fillStyle = '#fff';
-        ctx.font = `bold ${textSize}px Arial, sans-serif`; // Fuente más específica
+        ctx.font = `bold ${textSize}px Arial, sans-serif`;
         ctx.textAlign = 'center';
         ctx.shadowColor = 'rgba(0,0,0,0.8)';
-        ctx.shadowBlur = 3; // Sombra más pronunciada
+        ctx.shadowBlur = 3;
         ctx.shadowOffsetX = 1;
         ctx.shadowOffsetY = 1;
         
-        // Dibujar múltiples líneas centradas
         const lineHeight = textSize * 1.3;
         const totalHeight = lines.length * lineHeight;
         const startY = -totalHeight/2 + lineHeight/2;
         
         lines.forEach((line, lineIndex) => {
           const y = startY + (lineIndex * lineHeight);
-          ctx.fillText(line, radius*0.65, y); // Más cerca del borde para mejor visibilidad
+          ctx.fillText(line, radius*0.65, y);
         });
         
         ctx.restore();
       }
-    }, [titulos, slice, center, radius, colors, n]);
+    }, [titles, slice, center, radius, colors, n]);
 
     useEffect(() => {
       draw();
-      window.addEventListener('resize', draw);
-      return () => window.removeEventListener('resize', draw);
     }, [draw]);
 
     const spin = () => {
-      if (spinning || n === 0) return;
-      setSpinning(true);
-      setMostrandoResultado(false);
+      if (spinning || n === 0 || showResult || isProcessing) return;
       
-      // Algoritmo de giro más realista y variable
+      setIsProcessing(true); // Bloquear inmediatamente
+      setSpinning(true);
+      setShowResult(false);
+      
       const minVueltas = 3;
       const maxVueltas = 8;
       const vueltas = Math.random() * (maxVueltas - minVueltas) + minVueltas;
-      
-      // Añadir variabilidad al ángulo final
       const baseAngle = Math.random() * 360;
-      const variabilidad = (Math.random() - 0.5) * slice * 0.8;
-      const anguloFinal = baseAngle + variabilidad;
-      
-      const totalRotacion = vueltas * 360 + anguloFinal;
+      const totalRotacion = vueltas * 360 + baseAngle;
       setSpinAngle(prev => prev + totalRotacion);
       
       setTimeout(() => {
         setSpinning(false);
-        
-        // Calcular qué sección tocó el pointer considerando la variabilidad
         const anguloNormalizado = (totalRotacion % 360);
         const anguloPointer = (360 - anguloNormalizado) % 360;
         const indiceSeleccionado = Math.floor(anguloPointer / slice) % n;
         
-        // Mostrar resultado arriba de la ruleta
-        setResultadoTexto(titulos[indiceSeleccionado] || '');
-        setResultadoIndice(indiceSeleccionado);
-        setMostrandoResultado(true);
+        setResultText(titles[indiceSeleccionado] || '');
+        setResultIndex(indiceSeleccionado);
+        
+        // Reducir tiempo de pausa a 1 segundo para más agilidad
+        setTimeout(() => {
+          setShowResult(true);
+        }, 1000);
       }, 3500);
     };
 
-    const continuarSiguienteRuleta = () => {
-      setMostrandoResultado(false);
-      onDone(resultadoIndice);
+    const continueToNext = () => {
+      setShowResult(false);
+      setIsProcessing(false); // Permitir nuevo ciclo
+      onResult(resultIndex);
     };
 
+    if (isLoading) {
+      return (
+        <div style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            border: '4px solid #f3f3f3',
+            borderTop: '4px solid #e53e3e',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }} />
+          <p>Cargando datos...</p>
+        </div>
+      );
+    }
+
     return (
-      <div style={{ position:'relative', marginBottom:20 }}>
-        {/* Contenedor de la ruleta con pointer pegado */}
+      <div style={{ position: 'relative', marginBottom: 20 }}>
         <div style={{ 
           position: 'relative', 
           width: size, 
           height: size,
           margin: '0 auto'
         }}>
-          {/* Pointer corregido - pegado al borde derecho de la ruleta */}
+          {/* Pointer */}
           <div style={{
             position: 'absolute',
             top: '50%',
@@ -336,36 +310,74 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
             zIndex: 3
           }} />
 
-          {/* Rueda giratoria */}
+          {/* Rueda */}
           <div style={{
             width: size, 
             height: size, 
-            borderRadius:'50%',
-            boxShadow:'0 0 10px rgba(0,0,0,0.3)',
-            transform:`rotate(${spinAngle}deg)`,
+            borderRadius: '50%',
+            boxShadow: '0 0 10px rgba(0,0,0,0.3)',
+            transform: `rotate(${spinAngle}deg)`,
             transition: spinning ? 'transform 3.5s cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
           }}>
             <canvas ref={canvasRef} width={size} height={size}
-              style={{ borderRadius:'50%', display:'block' }} />
-            {/* Centro blanco */}
-            <div style={{
-              position:'absolute', width:50, height:50,
-              background:'#fff', border:'4px solid #ddd',
-              borderRadius:'50%', top:'50%', left:'50%',
-              transform:'translate(-50%,-50%)',
-              zIndex:1
-            }} />
+              style={{ borderRadius: '50%', display: 'block' }} />
           </div>
+
+          {/* Botón central para girar */}
+          <button
+            disabled={spinning || n === 0 || showResult || isProcessing}
+            onClick={spin}
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '120px',
+              height: '120px',
+              borderRadius: '50%',
+              border: '4px solid #fff',
+              background: (spinning || isProcessing)
+                ? 'linear-gradient(45deg, #9ca3af, #6b7280)' 
+                : showResult
+                ? 'linear-gradient(45deg, #10b981, #059669)'
+                : 'linear-gradient(45deg, #e53e3e, #dc2626)',
+              color: 'white',
+              fontSize: (spinning || isProcessing) ? '0.75rem' : showResult ? '0.9rem' : '1rem',
+              fontWeight: '700',
+              cursor: (spinning || showResult || isProcessing) ? 'not-allowed' : 'pointer',
+              zIndex: 4,
+              boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              lineHeight: '1.2'
+            }}
+            onMouseEnter={(e) => {
+              if (!spinning && !showResult && !isProcessing && n > 0) {
+                e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.4)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!spinning && !showResult && !isProcessing) {
+                e.target.style.transform = 'translate(-50%, -50%) scale(1)';
+                e.target.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+              }
+            }}
+          >
+            {(spinning || isProcessing) ? 'Girando...' : 
+             showResult ? 'Resultado' :
+             n === 0 ? 'Sin datos' : 'GIRAR'}
+          </button>
         </div>
 
-        {/* Modal de resultado elegante */}
-        {mostrandoResultado && (
+        {/* MODAL DE RESULTADO RESTAURADO - Este te gustaba */}
+        {showResult && (
           <div style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: 'rgba(0,0,0,0.7)',
             display: 'flex',
             alignItems: 'center',
@@ -383,19 +395,12 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
               boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
               animation: 'modalSlideIn 0.4s ease-out'
             }}>
-              <div style={{
-                fontSize: '3rem',
-                marginBottom: '1rem'
-              }}>
-                🎯
-              </div>
+              <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎯</div>
               <h2 style={{
                 color: '#e53e3e',
                 marginBottom: '1.5rem',
                 fontSize: '1.5rem',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '1px'
+                fontWeight: '700'
               }}>
                 Resultado del Sorteo
               </h2>
@@ -411,14 +416,13 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
                   fontWeight: 'bold',
                   color: '#2d3748',
                   margin: 0,
-                  lineHeight: 1.4,
                   wordWrap: 'break-word'
                 }}>
-                  {resultadoTexto}
+                  {resultText}
                 </p>
               </div>
               <button
-                onClick={continuarSiguienteRuleta}
+                onClick={continueToNext}
                 style={{
                   backgroundColor: '#e53e3e',
                   color: 'white',
@@ -428,361 +432,712 @@ export default function RuletaIncidencias({ onReturnToMenu }) {
                   fontWeight: '600',
                   borderRadius: '10px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  boxShadow: '0 4px 12px rgba(229, 62, 62, 0.3)'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = '#c53030';
-                  e.target.style.transform = 'translateY(-2px)';
-                  e.target.style.boxShadow = '0 6px 16px rgba(229, 62, 62, 0.4)';
+                  e.target.style.backgroundColor = '#dc2626';
+                  e.target.style.transform = 'translateY(-1px)';
                 }}
                 onMouseLeave={(e) => {
                   e.target.style.backgroundColor = '#e53e3e';
                   e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 4px 12px rgba(229, 62, 62, 0.3)';
                 }}
               >
-                Siguiente Ruleta →
+                Continuar →
               </button>
             </div>
           </div>
         )}
-
-        {/* Botón girar */}
-        <button 
-          className="wheel-button" 
-          disabled={spinning || n === 0 || mostrandoResultado}
-          onClick={spin}
-          style={{
-            display: 'block',
-            margin: '30px auto 0',
-            padding: '1rem 2rem',
-            fontSize: '1.2rem',
-            fontWeight: '700',
-            backgroundColor: '#89ac76',
-            minWidth: '200px',
-            border: 'none',
-            borderRadius: '8px',
-            color: 'white',
-            cursor: spinning || mostrandoResultado ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease'
-          }}
-        >
-          {spinning ? 'Girando…' : 
-           mostrandoResultado ? 'Ver resultado' : 
-           n === 0 ? 'Sin opciones disponibles' : 'Girar ruleta'}
-        </button>
       </div>
     );
   }
 
-  // POST /sorteo (usando el comentario completo)
-  const guardarSorteo = async () => {
-    const nowIso = new Date().toISOString();
-    const comentarioCompleto = construirComentarioCompleto();
+  // Función para obtener títulos según el paso actual
+  const getCurrentWheelTitles = () => {
+    switch (currentStep) {
+      case 'category':
+        return categories.map(c => c.nombre);
+      case 'incident':
+        return incidents.map(i => i.descripcion);
+      case 'individual':
+        return members.map(m => `${m.nombre} ${m.apellido}`);
+      case 'extra-group':
+        return groups.filter(g => g.id !== selectedGroup?.id).map(g => g.nombre);
+      case 'extra-individual':
+        return extraMembers.map(m => `${m.nombre} ${m.apellido}`);
+      default:
+        return [];
+    }
+  };
+
+  // Función para manejar resultado de la ruleta
+  const handleWheelResult = (index) => {
+    switch (currentStep) {
+      case 'category':
+        setSelectedCategory(categories[index]);
+        setCurrentStep('incident');
+        break;
+      case 'incident':
+        setSelectedIncident(incidents[index]);
+        setCurrentStep('choose-path');
+        break;
+      case 'individual':
+        setSelectedMember(members[index]);
+        if (selectedPath === 'extra') {
+          setCurrentStep('extra-group');
+        } else {
+          setCurrentStep('comment');
+        }
+        break;
+      case 'extra-group':
+        const availableGroups = groups.filter(g => g.id !== selectedGroup?.id);
+        setSelectedExtraGroup(availableGroups[index]);
+        setCurrentStep('extra-individual');
+        break;
+      case 'extra-individual':
+        setSelectedExtraMember(extraMembers[index]);
+        setCurrentStep('comment');
+        break;
+      default:
+        // Caso default para satisfacer eslint
+        console.warn('Paso no reconocido:', currentStep);
+        break;
+    }
+  };
+
+  // Función para verificar si está cargando
+  const isCurrentStepLoading = () => {
+    switch (currentStep) {
+      case 'category': return loading.categories;
+      case 'incident': return loading.incidents;
+      case 'individual': return loading.members;
+      case 'extra-individual': return loading.extraMembers;
+      default: return false;
+    }
+  };
+
+  // Función para obtener mensaje del paso actual
+  const getStepMessage = () => {
+    switch (currentStep) {
+      case 'group': return "Selecciona un grupo para comenzar";
+      case 'category': return `Grupo: ${selectedGroup?.nombre} - Sortear Categoría`;
+      case 'incident': return `Categoría: ${selectedCategory?.nombre} - Sortear Incidencia`;
+      case 'choose-path': return "¿Qué quieres hacer ahora?";
+      case 'individual': return selectedPath === 'extra' ? "Sortear Integrante del Grupo Principal" : "Sortear Integrante";
+      case 'extra-group': return "Sortear Grupo Extra";
+      case 'extra-individual': return `Grupo Extra: ${selectedExtraGroup?.nombre} - Sortear Integrante`;
+      case 'comment': return "Finalizar y Guardar";
+      default: return "";
+    }
+  };
+
+  // Función para mostrar notificación
+  const showNotification = (type, message) => {
+    setNotification({ show: true, type, message });
+    // Auto-ocultar después de 4 segundos
+    setTimeout(() => {
+      setNotification({ show: false, type: '', message: '' });
+    }, 4000);
+  };
+
+  // Función para verificar si un grupo ya sorteó hoy
+  const getInfoSorteoHoy = (grupoId) => {
+    return sorteosHoy.find(sorteo => sorteo.id_grupo === grupoId);
+  };
+
+  // Función para guardar sorteo
+  const handleSave = async () => {
+    setLoading(prev => ({ ...prev, saving: true }));
+    
+    let fullComment = comment.trim() || 'Sorteo realizado';
+    if (selectedExtraGroup && selectedExtraMember) {
+      fullComment += ` | Grupo Extra: ${selectedExtraGroup.nombre} | Integrante Extra: ${selectedExtraMember.nombre} ${selectedExtraMember.apellido}`;
+    }
     
     const payload = {
-      id_grupo:         grupoSel.id,
-      fecha:            nowIso,
-      id_profesor:      4,
-      id_incidencia:    incSel.id,
-      id_alumno:        individual ? mbrSel.id : null,
-      comentario:       comentarioCompleto,
-      comentario_fecha: nowIso
+      id_grupo: selectedGroup.id,
+      fecha: new Date().toISOString(), // Solo para cumplir con el backend, se ignorará
+      id_profesor: 4,
+      id_incidencia: selectedIncident.id,
+      id_alumno: selectedMember ? selectedMember.id : null,
+      comentario: fullComment,
+      comentario_fecha: new Date().toISOString() // Solo para cumplir con el backend, se ignorará
     };
+
     try {
-      const res = await fetch('http://localhost:5000/sorteo', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body:JSON.stringify(payload)
+      const response = await fetch('http://localhost:5000/sorteo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Error desconocido');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al guardar');
       }
-      alert('🎉 Sorteo y comentario guardados correctamente');
-      onReturnToMenu?.();
-    } catch (e) {
-      console.error(e);
-      alert('⚠️ Error guardando sorteo/comentario: ' + e.message);
-      onReturnToMenu?.();
+
+      showNotification('success', '🎉 ¡Sorteo guardado correctamente! Se ha registrado en el historial.');
+      
+      // Actualizar sorteos del día después de guardar
+      try {
+        const sorteosHoyRes = await fetch('http://localhost:5000/sorteos/hoy');
+        const sorteosHoyData = await sorteosHoyRes.json();
+        setSorteosHoy(Array.isArray(sorteosHoyData) ? sorteosHoyData : []);
+      } catch (error) {
+        console.error('Error actualizando sorteos del día:', error);
+      }
+      
+      setTimeout(() => {
+        resetProcess();
+      }, 2000);
+    } catch (error) {
+      showNotification('error', `❌ Error al guardar el sorteo: ${error.message}`);
+    } finally {
+      setLoading(prev => ({ ...prev, saving: false }));
     }
+  };
+
+  // Función para reiniciar proceso
+  const resetProcess = () => {
+    setCurrentStep('group');
+    setSelectedGroup(null);
+    setSelectedCategory(null);
+    setSelectedIncident(null);
+    setSelectedMember(null);
+    setSelectedExtraGroup(null);
+    setSelectedExtraMember(null);
+    setSelectedPath(null);
+    setComment('');
+    setMembers([]);
+    setExtraMembers([]);
   };
 
   return (
     <div className="ruleta-container">
-      {/* Columna de controles */}
-      <div className="controls-column">
-        {/* Grupo */}
-        <label><strong>Grupo:</strong></label>
-        <select
-          value={grupoSel?.id||''}
-          onChange={e=>{
-            const g = grupos.find(x=>x.id===+e.target.value);
-            setGrupoSel(g);
-            setCatSel(null); setIncSel(null); setMbrSel(null);
-            setGrupoExtraSel(null); setMbrExtraSel(null);
-            setIndividual(false);
-            setRuletaExtraActiva(false);
-            setEstudiantesExcluidos([]);
-            setMostrarExclusion(false);
-            setFase(1);
-          }}
-          style={{fontSize:16,padding:8}}
-        >
-          <option value="">— Selecciona un grupo —</option>
-          {grupos.map(g=>(
-            <option key={g.id} value={g.id}>{g.nombre}</option>
-          ))}
-        </select>
-
-        {/* Categoría */}
-        <label><strong>Categoría:</strong></label>
-        <input readOnly value={catSel?.nombre||''} style={{padding:8,fontSize:16}}/>
-
-        {/* Incidencia */}
-        <label><strong>Incidencia:</strong></label>
-        <input readOnly value={incSel?.descripcion||''} style={{padding:8,fontSize:16}}/>
-
-        {/* Integrante con botón de exclusión */}
-        {individual && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <label><strong>Integrante seleccionado:</strong></label>
-                <input readOnly
-                  value={mbrSel ? `${mbrSel.nombre} ${mbrSel.apellido}` : ''}
-                  style={{padding:8,fontSize:16, width: '100%'}}
-                />
-              </div>
-              <button
-                onClick={() => setMostrarExclusion(!mostrarExclusion)}
-                disabled={fase !== 3 || estudiantesParaExcluir.length === 0}
-                style={{
-                  padding: '8px',
-                  fontSize: '14px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: estudiantesParaExcluir.length > 0 ? 'pointer' : 'not-allowed',
-                  marginTop: '24px',
-                  marginLeft: '15px'
-                }}
-                title="Excluir estudiante de la ruleta"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Combobox para exclusión */}
-            {mostrarExclusion && (
-              <div style={{ marginTop: 8 }}>
-                <label><strong>Excluir estudiante:</strong></label>
-                <select
-                  onChange={e => {
-                    if (e.target.value) {
-                      excluirEstudiante(e.target.value);
-                    }
-                  }}
-                  value=""
-                  style={{fontSize:14, padding:6, width: '100%'}}
-                >
-                  <option value="">— Selecciona estudiante a excluir —</option>
-                  {estudiantesParaExcluir.map(m => (
-                    <option key={m.id} value={m.id}>
-                      {m.nombre} {m.apellido}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Lista de estudiantes excluidos */}
-            {estudiantesExcluidos.length > 0 && (
-              <div style={{ marginTop: 8 }}>
-                <label><strong>Estudiantes excluidos:</strong></label>
-                <div style={{ 
-                  maxHeight: '100px', 
-                  overflowY: 'auto', 
-                  border: '1px solid #ddd', 
-                  borderRadius: '4px',
-                  padding: '8px',
-                  backgroundColor: '#f8f9fa'
-                }}>
-                  {estudiantesExcluidos.map(est => (
-                    <div key={est.id} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      marginBottom: '4px',
-                      fontSize: '14px'
-                    }}>
-                      <span>{est.nombre} {est.apellido}</span>
-                      <button
-                        onClick={() => reincluirEstudiante(est.id)}
-                        style={{
-                          padding: '2px 6px',
-                          fontSize: '12px',
-                          backgroundColor: '#28a745',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '3px',
-                          cursor: 'pointer'
-                        }}
-                        title="Reincluir en la ruleta"
-                      >
-                        ↺
-                      </button>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                  Estudiantes disponibles para sorteo: {miembrosDisponibles.length}
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Comentario */}
-        <label><strong>Comentario:</strong></label>
-        <textarea
-          rows={3}
-          value={comentario}
-          disabled={!incSel}
-          onChange={e=>setComentario(e.target.value)}
-          style={{padding:8,fontSize:16,resize:'none'}}
-        />
-
-        {/* Campos del Grupo Extra (solo si están seleccionados) */}
-        {grupoExtraSel && (
-          <>
-            <label><strong>Grupo Extra:</strong></label>
-            <input readOnly value={grupoExtraSel.nombre} style={{padding:8,fontSize:16}}/>
-          </>
-        )}
-
-        {mbrExtraSel && (
-          <>
-            <label><strong>Integrante Extra:</strong></label>
-            <input readOnly
-              value={`${mbrExtraSel.nombre} ${mbrExtraSel.apellido}`}
-              style={{padding:8,fontSize:16}}
-            />
-          </>
-        )}
-
-        {/* Switch Grupal/Individual */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label>Grupal</label>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={individual}
-              disabled={!incSel}
-              onChange={e => {
-                const nuevoIndividual = e.target.checked;
-                setIndividual(nuevoIndividual);
-                
-                if (nuevoIndividual && incSel && grupoSel) {
-                  // Si se activa individual y ya hay incidencia, ir a cargar miembros
-                  setFase(3);
-                } else if (!nuevoIndividual) {
-                  // Si se desactiva individual, volver a fase 2
-                  setFase(2);
-                  setMbrSel(null);
-                  setEstudiantesExcluidos([]);
-                  setMostrarExclusion(false);
-                }
-              }}
-            />
-            <span className="switch-slider"></span>
-          </label>
-          <label>Individual</label>
+      {/* Notificación flotante */}
+      {notification.show && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          padding: '1rem 1.5rem',
+          borderRadius: '12px',
+          boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+          border: '1px solid',
+          maxWidth: '400px',
+          fontSize: '0.95rem',
+          fontWeight: '600',
+          backgroundColor: notification.type === 'success' ? '#f0fdf4' : '#fef2f2',
+          borderColor: notification.type === 'success' ? '#22c55e' : '#ef4444',
+          color: notification.type === 'success' ? '#15803d' : '#dc2626',
+          animation: 'slideInFromRight 0.4s ease-out'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span style={{ fontSize: '1.2rem' }}>
+              {notification.type === 'success' ? '✅' : '⚠️'}
+            </span>
+            <span>{notification.message}</span>
+          </div>
         </div>
+      )}
 
-        {/* Botón Ruleta Grupal Extra */}
-        {puedeActivarExtra() && !ruletaExtraActiva && (
-          <button 
-            className="wheel-button" 
-            onClick={activarRuletaExtra}
-            style={{...botonEstilo, margin: '20px auto 0', display: 'block', backgroundColor: '#f58231'}}
-          >
-            Ruleta Grupal Extra
-          </button>
+      {/* Columna de la ruleta (IZQUIERDA) */}
+      <div className="ruleta-column">
+        {currentStep === 'group' && (
+          <div style={{ textAlign: 'center', marginTop: 200, color: '#888' }}>
+            <h2 style={{ color: '#2d3748' }}>Bienvenido al Sorteo</h2>
+            <p>Selecciona un grupo en el panel de la derecha para comenzar</p>
+          </div>
         )}
-
-        {/* Guardar */}
-        {incSel && (!individual || mbrSel) && (
-            <button className="wheel-button save-button" onClick={guardarSorteo} style={{...botonEstilo,
-                  margin: '20px auto 0',     
-                  display: 'block'}}>
-                Guardar Resultado
-              </button>
+        
+        {['category', 'incident', 'individual', 'extra-group', 'extra-individual'].includes(currentStep) && (
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <h3 style={{ color: '#2d3748', marginBottom: '1rem' }}>
+              {getStepMessage()}
+            </h3>
+            <Wheel
+              titles={getCurrentWheelTitles()}
+              onResult={handleWheelResult}
+              isLoading={isCurrentStepLoading()}
+            />
+          </div>
         )}
       </div>
 
-      {/* Columna de la ruleta */}
-      <div className="ruleta-column">
-        {fase === 0 && (
-          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
-            Selecciona un grupo para comenzar.
+      {/* Columna de controles (DERECHA) */}
+      <div className="controls-column">
+        {/* Progreso visual compacto */}
+        <div style={{
+          backgroundColor: '#f8f9fa',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          marginBottom: '1rem',
+          border: '2px solid #e53e3e'
+        }}>
+          <div style={{ 
+            fontSize: '0.9rem', 
+            color: '#2d3748',
+            fontWeight: '600',
+            textAlign: 'center'
+          }}>
+            {getStepMessage()}
+          </div>
+        </div>
+
+        {/* Resumen compacto de selecciones anteriores */}
+        {(selectedGroup || selectedCategory || selectedIncident || selectedMember || selectedExtraGroup || selectedExtraMember) && (
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: '1px solid #6b7280'
+          }}>
+            <h4 style={{ 
+              margin: '0 0 0.75rem 0', 
+              color: '#2d3748',
+              fontSize: '0.95rem',
+              fontWeight: '600'
+            }}>
+              Selecciones Realizadas:
+            </h4>
+            <div style={{ fontSize: '0.85rem', lineHeight: '1.4', color: '#4a5568' }}>
+              {selectedGroup && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Grupo:</strong> {selectedGroup.nombre}
+                </div>
+              )}
+              {selectedCategory && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Categoría:</strong> {selectedCategory.nombre}
+                </div>
+              )}
+              {selectedIncident && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Incidencia:</strong> {selectedIncident.descripcion}
+                </div>
+              )}
+              {selectedMember && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Integrante:</strong> {selectedMember.nombre} {selectedMember.apellido}
+                </div>
+              )}
+              {selectedExtraGroup && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Grupo Extra:</strong> {selectedExtraGroup.nombre}
+                </div>
+              )}
+              {selectedExtraMember && (
+                <div style={{ marginBottom: '0.25rem' }}>
+                  <strong>Integrante Extra:</strong> {selectedExtraMember.nombre} {selectedExtraMember.apellido}
+                </div>
+              )}
+            </div>
           </div>
         )}
-        {fase === 1 && (
-          <Wheel
-            titulos={categorias.map(c=>c.nombre)}
-            onDone={i=>{ setCatSel(categorias[i]); setIncSel(null); setMbrSel(null); setFase(2); }}
-          />
-        )}
-        {fase === 2 && (
-          <Wheel
-            titulos={incidencias.map(x=>x.descripcion)}
-            onDone={i=>{ 
-              setIncSel(incidencias[i]); 
-              setMbrSel(null); 
-            }}
-          />
-        )}
-        {fase === 3 && individual && (
-          <Wheel
-            titulos={miembrosDisponibles.map(m=>`${m.nombre} ${m.apellido}`)}
-            onDone={i=>setMbrSel(miembrosDisponibles[i])}
-          />
-        )}
-        {fase === 4 && ruletaExtraActiva && gruposDisponibles.length > 0 && (
-          <Wheel
-            titulos={gruposDisponibles.map(g=>g.nombre)}
-            onDone={i=>{
-              console.log('Grupo extra seleccionado:', gruposDisponibles[i]);
-              setGrupoExtraSel(gruposDisponibles[i]); 
-              setMbrExtraSel(null); 
-              setFase(5);
-            }}
-          />
-        )}
+
+        {/* Solo mostrar el control activo según el paso */}
         
-        {/* AGREGA ESTA LÍNEA para mostrar cuando no hay grupos disponibles */}
-        {fase === 4 && ruletaExtraActiva && gruposDisponibles.length === 0 && (
-          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
-            No hay otros grupos disponibles para seleccionar.
+        {/* Paso 1: Seleccionar Grupo */}
+        {currentStep === 'group' && (
+          <div>
+            <label style={{ 
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#2d3748',
+              marginBottom: '0.5rem',
+              display: 'block'
+            }}>
+              Selecciona un Grupo:
+            </label>
+            {loading.groups || loading.sorteosHoy ? (
+              <div style={{ 
+                padding: '1rem', 
+                textAlign: 'center', 
+                color: '#666',
+                backgroundColor: '#f8f9fa',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0'
+              }}>
+                🔄 Cargando grupos...
+              </div>
+            ) : (
+              <select
+                value={selectedGroup?.id || ''}
+                onChange={(e) => {
+                  const group = groups.find(g => g.id === +e.target.value);
+                  setSelectedGroup(group);
+                  if (group) setCurrentStep('category');
+                }}
+                style={{ 
+                  fontSize: '1rem', 
+                  padding: '0.75rem',
+                  width: '100%',
+                  borderRadius: '6px',
+                  border: '2px solid #e2e8f0',
+                  backgroundColor: 'white'
+                }}
+              >
+                <option value="">— Selecciona un grupo —</option>
+                {groups.map(g => {
+                  const sorteoInfo = getInfoSorteoHoy(g.id);
+                  const yaSorteo = !!sorteoInfo;
+                  const label = yaSorteo ? `${g.nombre} ✅` : g.nombre;
+                  
+                  return (
+                    <option 
+                      key={g.id} 
+                      value={g.id}
+                      style={{ 
+                        backgroundColor: yaSorteo ? '#dcfce7' : 'white',
+                        color: yaSorteo ? '#166534' : 'inherit',
+                        fontWeight: yaSorteo ? '600' : 'normal'
+                      }}
+                    >
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            )}
           </div>
         )}
-        
-        {fase === 5 && ruletaExtraActiva && miembrosExtra.length > 0 && (
-          <Wheel
-            titulos={miembrosExtra.map(m=>`${m.nombre} ${m.apellido}`)}
-            onDone={i=>setMbrExtraSel(miembrosExtra[i])}
-          />
+
+        {/* Paso: Elegir camino - LOS 3 ESCENARIOS con paleta oficial */}
+        {currentStep === 'choose-path' && (
+          <div>
+            <label style={{ 
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#2d3748',
+              marginBottom: '1rem',
+              display: 'block',
+              textAlign: 'center'
+            }}>
+              ¿Qué quieres hacer ahora?
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              
+              {/* ESCENARIO 1: Simple - Rojo principal */}
+              <button
+                onClick={() => {
+                  setSelectedPath('simple');
+                  setCurrentStep('comment');
+                }}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: '#e53e3e',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#dc2626';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#e53e3e';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+                  📝 Finalizar con Comentario
+                </div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  Guardar el sorteo grupal con comentario y terminar
+                </div>
+              </button>
+
+              {/* ESCENARIO 2: Individual - Gris oscuro */}
+              <button
+                onClick={() => {
+                  setSelectedPath('individual');
+                  setCurrentStep('individual');
+                }}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#4b5563';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#6b7280';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+                  👤 Sortear Integrante del Grupo
+                </div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  Seleccionar un integrante del grupo actual y luego comentario
+                </div>
+              </button>
+
+              {/* ESCENARIO 3: Extra - Negro/Gris muy oscuro */}
+              <button
+                onClick={() => {
+                  setSelectedPath('extra');
+                  setCurrentStep('individual');
+                }}
+                style={{
+                  padding: '1rem',
+                  backgroundColor: '#374151',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#1f2937';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#374151';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                <div style={{ fontSize: '1.1rem', marginBottom: '0.25rem' }}>
+                  👥 Sorteo Grupal Extra
+                </div>
+                <div style={{ fontSize: '0.85rem', opacity: 0.9 }}>
+                  Integrante del grupo + otro grupo + integrante extra
+                </div>
+              </button>
+            </div>
+          </div>
         )}
-        
-        {/* AGREGA ESTA LÍNEA para mostrar cuando está cargando miembros */}
-        {fase === 5 && ruletaExtraActiva && miembrosExtra.length === 0 && (
-          <div style={{ textAlign:'center', marginTop:200, color:'#888' }}>
-            Cargando miembros del grupo extra...
+
+        {/* Paso final: Comentario y guardar */}
+        {currentStep === 'comment' && (
+          <div>
+            {/* Resumen final con paleta oficial */}
+            <div style={{
+              backgroundColor: '#f8f9fa',
+              padding: '1.25rem',
+              borderRadius: '8px',
+              marginBottom: '1.5rem',
+              border: '2px solid #e53e3e'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 1rem 0', 
+                color: '#2d3748',
+                fontSize: '1.1rem',
+                fontWeight: '700',
+                textAlign: 'center'
+              }}>
+                🎯 Resumen Final del Sorteo
+              </h4>
+              <div style={{ fontSize: '0.95rem', lineHeight: '1.6', color: '#2d3748' }}>
+                <div style={{ 
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 2fr',
+                  gap: '0.5rem',
+                  alignItems: 'center'
+                }}>
+                  <strong>Tipo:</strong> 
+                  <span style={{ 
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '4px',
+                    backgroundColor: selectedPath === 'simple' ? '#e53e3e' : selectedPath === 'individual' ? '#6b7280' : '#374151',
+                    color: 'white',
+                    fontSize: '0.85rem',
+                    fontWeight: '600'
+                  }}>
+                    {selectedPath === 'simple' ? 'Grupal' : selectedPath === 'individual' ? 'Individual' : 'Grupal Extra'}
+                  </span>
+                  
+                  <strong>Grupo:</strong> 
+                  <span>{selectedGroup.nombre}</span>
+                  
+                  <strong>Categoría:</strong> 
+                  <span>{selectedCategory.nombre}</span>
+                  
+                  <strong>Incidencia:</strong> 
+                  <span>{selectedIncident.descripcion}</span>
+                  
+                  {selectedMember && (
+                    <>
+                      <strong>Integrante:</strong> 
+                      <span>{selectedMember.nombre} {selectedMember.apellido}</span>
+                    </>
+                  )}
+                  {selectedExtraGroup && (
+                    <>
+                      <strong>Grupo Extra:</strong> 
+                      <span>{selectedExtraGroup.nombre}</span>
+                    </>
+                  )}
+                  {selectedExtraMember && (
+                    <>
+                      <strong>Integrante Extra:</strong> 
+                      <span>{selectedExtraMember.nombre} {selectedExtraMember.apellido}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <label style={{ 
+              fontSize: '1rem',
+              fontWeight: '600',
+              color: '#2d3748',
+              marginBottom: '0.5rem',
+              display: 'block'
+            }}>
+              Comentario del Sorteo:
+            </label>
+            <textarea
+              rows={4}
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Agrega un comentario sobre este sorteo... (opcional)"
+              style={{ 
+                padding: '0.75rem', 
+                fontSize: '0.95rem', 
+                resize: 'vertical',
+                width: '100%',
+                borderRadius: '6px',
+                border: '2px solid #e2e8f0',
+                fontFamily: 'inherit',
+                boxSizing: 'border-box' // Agregar para que el padding no cause desbordamiento
+              }}
+            />
+
+            <div style={{ 
+              display: 'flex', 
+              gap: '0.75rem', 
+              marginTop: '1.5rem',
+              justifyContent: 'center'
+            }}>
+              <button
+                onClick={() => setCurrentStep('choose-path')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.backgroundColor = '#4b5563';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.backgroundColor = '#6b7280';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                ← Volver
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={loading.saving}
+                style={{
+                  padding: '0.75rem 2rem',
+                  backgroundColor: loading.saving ? '#9ca3af' : '#e53e3e',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: loading.saving ? 'not-allowed' : 'pointer',
+                  fontWeight: '700',
+                  fontSize: '1rem',
+                  transition: 'all 0.2s ease',
+                  boxShadow: loading.saving ? 'none' : '0 2px 4px rgba(229, 62, 62, 0.3)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading.saving) {
+                    e.target.style.backgroundColor = '#dc2626';
+                    e.target.style.transform = 'translateY(-1px)';
+                    e.target.style.boxShadow = '0 4px 8px rgba(229, 62, 62, 0.4)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading.saving) {
+                    e.target.style.backgroundColor = '#e53e3e';
+                    e.target.style.transform = 'translateY(0)';
+                    e.target.style.boxShadow = '0 2px 4px rgba(229, 62, 62, 0.3)';
+                  }
+                }}
+              >
+                {loading.saving ? (
+                  <>
+                    <span style={{ marginRight: '0.5rem' }}>💾</span>
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <span style={{ marginRight: '0.5rem' }}>💾</span>
+                    Guardar Sorteo
+                  </>
+                )}
+                {loading.saving && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                    animation: 'shimmer 1.5s infinite'
+                  }} />
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Botón reiniciar con paleta oficial */}
+        {currentStep !== 'group' && (
+          <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+            <button
+              onClick={resetProcess}
+              style={{
+                padding: '0.75rem 1.5rem',
+                backgroundColor: '#dc2626',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontWeight: '600',
+                fontSize: '0.9rem',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 2px 4px rgba(220, 38, 38, 0.3)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor = '#b91c1c';
+                e.target.style.transform = 'translateY(-1px)';
+                e.target.style.boxShadow = '0 4px 8px rgba(220, 38, 38, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor = '#dc2626';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 2px 4px rgba(220, 38, 38, 0.3)';
+              }}
+            >
+              🔄 Reiniciar Proceso
+            </button>
           </div>
         )}
       </div>

@@ -147,56 +147,88 @@ function Historial({ onBackToMenu }) {
               </tr>
             </thead>
             <tbody>
-              {historial.map((item) => (
-                <React.Fragment key={item.id}>
-                  <tr className="historial-row">
-                    <td>{item.grupo}</td>
-                    <td>{item.tipoIncidente}</td>
-                    <td>{item.incidente}</td>
-                    <td>{new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
-                    <td>
-                      {item.comentario.length > 30
-                        ? `${item.comentario.substring(0, 30)}...`
-                        : item.comentario}
-                    </td>
-                    <td>{item.alumno ? "Si" : "No"}</td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        onClick={() => toggleExpand(item.id)}
-                        className={`expand-button ${item.expandido ? 'expanded' : ''}`}
-                      >
-                        {item.expandido ? '-' : '+'}
-                      </button>
-                    </td>
-                  </tr>
-                  {item.expandido && (
-                    <tr className="expanded-row">
-                      <td colSpan="7">
-                        <div>
-                          <p><strong>Grupo:</strong> {item.grupo}</p>
-                          <p><strong>Tipo Incidente:</strong> {item.tipoIncidente}</p>
-                          <p><strong>Incidente:</strong> {item.incidente}</p>
-                          <p><strong>Fecha:</strong> {new Date(item.fecha).toLocaleString('es-CL', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric', 
-                            hour: '2-digit', 
-                            minute: '2-digit', 
-                            timeZone: 'America/Santiago' 
-                          })}</p>
-                          <p><strong>Comentario:</strong> {item.comentario}</p>
-                          {item.alumno && (
-                            <p>
-                              <strong>Alumno:</strong> {item.alumno.nombre} {item.alumno.apellido}
-                            </p>
-                          )}
-                        </div>
+              {historial.map((item) => {
+                // Tratar la fecha como string y crear Date manualmente para evitar conversiones de zona horaria
+                let fecha;
+                try {
+                  // Si la fecha viene como string "YYYY-MM-DD HH:MM:SS", parsearlo manualmente
+                  if (typeof item.fecha === 'string' && item.fecha.includes(' ')) {
+                    const [fechaParte, horaParte] = item.fecha.split(' ');
+                    const [año, mes, dia] = fechaParte.split('-');
+                    const [hora, minuto, segundo] = horaParte.split(':');
+                    
+                    // Crear fecha local sin conversión de zona horaria
+                    fecha = new Date(
+                      parseInt(año), 
+                      parseInt(mes) - 1, // Los meses en JavaScript van de 0-11
+                      parseInt(dia), 
+                      parseInt(hora), 
+                      parseInt(minuto), 
+                      parseInt(segundo || 0)
+                    );
+                  } else {
+                    // Fallback al método anterior
+                    fecha = new Date(item.fecha);
+                  }
+                } catch (error) {
+                  console.error('Error parseando fecha:', item.fecha, error);
+                  fecha = new Date(); // Fecha actual como fallback
+                }
+                
+                return (
+                  <React.Fragment key={item.id}>
+                    <tr className="historial-row">
+                      <td>{item.grupo}</td>
+                      <td>{item.tipoIncidente}</td>
+                      <td>{item.incidente}</td>
+                      <td>{fecha.toLocaleDateString('es-CL', { 
+                        day: '2-digit', 
+                        month: '2-digit', 
+                        year: 'numeric'
+                      })}</td>
+                      <td>
+                        {item.comentario.length > 30
+                          ? `${item.comentario.substring(0, 30)}...`
+                          : item.comentario}
+                      </td>
+                      <td>{item.alumno ? "Si" : "No"}</td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          onClick={() => toggleExpand(item.id)}
+                          className={`expand-button ${item.expandido ? 'expanded' : ''}`}
+                        >
+                          {item.expandido ? '-' : '+'}
+                        </button>
                       </td>
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+                    {item.expandido && (
+                      <tr className="expanded-row">
+                        <td colSpan="7">
+                          <div>
+                            <p><strong>Grupo:</strong> {item.grupo}</p>
+                            <p><strong>Tipo Incidente:</strong> {item.tipoIncidente}</p>
+                            <p><strong>Incidente:</strong> {item.incidente}</p>
+                            <p><strong>Fecha:</strong> {fecha.toLocaleString('es-CL', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric', 
+                              hour: '2-digit', 
+                              minute: '2-digit'
+                            })}</p>
+                            <p><strong>Comentario:</strong> {item.comentario}</p>
+                            {item.alumno && (
+                              <p>
+                                <strong>Alumno:</strong> {item.alumno.nombre} {item.alumno.apellido}
+                              </p>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>

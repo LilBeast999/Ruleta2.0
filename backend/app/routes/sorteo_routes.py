@@ -5,9 +5,10 @@ from app.models.incidencia import Incidencia
 from app.models.categoria import Categoria
 from app.models.comentario import Comentario
 from app.models.alumno import Alumno
-from app.models.profesor import Profesor  # asegúrate de importar el modelo
+from app.models.profesor import Profesor
 from app import db
-from datetime import datetime
+from datetime import datetime, date
+from sqlalchemy import text
 
 sorteo_bp = Blueprint('sorteo', __name__)
 
@@ -43,28 +44,26 @@ def crear_sorteo():
                 codigo_recuperacion="dummy"
             )
             db.session.add(dummy_profesor)
-            db.session.flush()  # asigna el id dummy
+            db.session.flush()
             id_profesor = dummy_profesor.id
 
     try:
-        fecha = datetime.fromisoformat(fecha_str)
+        # Usar fecha actual sin zona horaria
+        ahora = datetime.now()
+        
         nuevo_sorteo = Sorteo(
             id_grupo=id_grupo,
-            fecha=fecha,
+            fecha=ahora,
             id_profesor=id_profesor,
             id_incidencia=id_incidencia,
             id_alumno=id_alumno
         )
         db.session.add(nuevo_sorteo)
-        db.session.flush()  # obtiene el id antes del commit
+        db.session.flush()
 
-        # si se envía comentario, se crea su registro asociado
-        if comentario_desc and comentario_fecha_str:
-            try:
-                comentario_fecha = datetime.fromisoformat(comentario_fecha_str)
-            except Exception as e:
-                db.session.rollback()
-                return jsonify({"error": f"Formato de comentario_fecha inválido: {e}"}), 400
+        # si se envía comentario, usar también fecha actual
+        if comentario_desc:
+            comentario_fecha = datetime.now()
             
             nuevo_comentario = Comentario(
                 descripcion=comentario_desc,
@@ -133,7 +132,10 @@ def obtener_sorteos():
         for registro in registros:
             s, grupo, incidencia, categoria, comentario, alumno = registro
             comentario_texto = comentario.descripcion if comentario else ""
-            fecha_str = s.fecha.isoformat()
+            
+            # Formatear fecha como string directamente sin zona horaria
+            fecha_formateada = s.fecha.strftime("%Y-%m-%d %H:%M:%S")
+            
             # Se agrega el alumno solo si existe
             alumno_data = {
                 "id": alumno.id,
@@ -146,7 +148,7 @@ def obtener_sorteos():
                 "grupo": grupo.nombre,
                 "tipoIncidente": categoria.nombre,
                 "incidente": incidencia.descripcion,
-                "fecha": fecha_str,
+                "fecha": fecha_formateada,
                 "comentario": comentario_texto,
                 "expandido": False,
                 "alumno": alumno_data
@@ -165,7 +167,7 @@ def obtener_sorteo_por_id(id):
 
         resultado = {
             "id": sorteo.id,
-            "fecha": sorteo.fecha.isoformat(),
+            "fecha": sorteo.fecha.strftime("%Y-%m-%d %H:%M:%S"),
             "grupo": {
                 "id": sorteo.grupo.id,
                 "nombre": sorteo.grupo.nombre
@@ -190,3 +192,81 @@ def obtener_sorteo_por_id(id):
         return jsonify(resultado), 200
     except Exception as e:
         return jsonify({"error": f"Error al obtener sorteo: {e}"}), 500
+
+@sorteo_bp.route('/sorteos/hoy', methods=['GET'])
+def obtener_sorteos_hoy():
+    """Obtiene todos los sorteos realizados hoy agrupados por grupo"""
+    try:
+        # Usar fecha actual del servidor para determinar "hoy"
+        hoy = date.today()
+        
+        # Crear rangos de tiempo para el día actual
+        inicio_dia = datetime.combine(hoy, datetime.min.time())
+        fin_dia = datetime.combine(hoy, datetime.max.time())
+        
+        # Consultar sorteos de hoy con información del grupo
+        sorteos_hoy = db.session.query(
+            Sorteo.id_grupo,
+            Grupo.nombre.label('grupo_nombre'),
+            db.func.count(Sorteo.id).label('cantidad_sorteos'),
+            db.func.max(Sorteo.fecha).label('ultimo_sorteo')
+        ).join(
+            Grupo, Sorteo.id_grupo == Grupo.id
+        ).filter(
+            Sorteo.fecha >= inicio_dia,
+            Sorteo.fecha <= fin_dia
+        ).group_by(
+            Sorteo.id_grupo, Grupo.nombre
+        ).all()
+        
+        resultado = []
+        for sorteo in sorteos_hoy:
+            # Formatear fecha como string
+            ultimo_sorteo_str = None
+            if sorteo.ultimo_sorteo:
+                ultimo_sorteo_str = sorteo.ultimo_sorteo.strftime("%Y-%m-%d %H:%M:%S")
+            
+            resultado.append({
+                'id_grupo': sorteo.id_grupo,
+                'grupo_nombre': sorteo.grupo_nombre,
+                'cantidad_sorteos': sorteo.cantidad_sorteos,
+                'ultimo_sorteo': ultimo_sorteo_str
+            })
+        
+        return jsonify(resultado), 200
+    except Exception as e:
+        return jsonify({"error": f"Error obteniendo sorteos de hoy: {str(e)}"}), 500
+
+@sorteo_bp.route('/sorteos/clear-all', methods=['DELETE'])
+def eliminar_todos_sorteos():
+    """Elimina todos los sorteos y comentarios de la base de datos"""
+    try:
+        # Eliminar en orden de dependencias
+        comentarios_eliminados = Comentario.query.count()
+        if comentarios_eliminados > 0:
+            db.session.execute(text("DELETE FROM comentario"))
+        
+        sorteos_eliminados = Sorteo.query.count()
+        if sorteos_eliminados > 0:
+            db.session.execute(text("DELETE FROM sorteo"))
+        
+        # Reiniciar secuencias de IDs
+        try:
+            db.session.execute(text("ALTER SEQUENCE sorteo_id_seq RESTART WITH 1"))
+            db.session.execute(text("ALTER SEQUENCE comentario_id_seq RESTART WITH 1"))
+        except Exception as seq_error:
+            print(f"Advertencia al reiniciar secuencias: {seq_error}")
+        
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Todos los sorteos eliminados correctamente",
+            "stats": {
+                "sorteos_eliminados": sorteos_eliminados,
+                "comentarios_eliminados": comentarios_eliminados
+            }
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"Error eliminando sorteos: {str(e)}"}), 500
