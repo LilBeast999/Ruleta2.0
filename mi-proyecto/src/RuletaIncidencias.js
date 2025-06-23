@@ -139,17 +139,19 @@ export default function RuletaIncidencias() {
   }, [currentStep, selectedExtraGroup]);
 
   // Componente de ruleta reutilizable
-  function Wheel({ titles = [], onResult, isLoading = false }) {
+  function Wheel({ titles = [], onResult, isLoading = false, excludedOptions = [], onExclusionChange }) {
     const canvasRef = useRef(null);
     const [spinAngle, setSpinAngle] = useState(0);
     const [spinning, setSpinning] = useState(false);
     const [showResult, setShowResult] = useState(false);
     const [resultText, setResultText] = useState('');
     const [resultIndex, setResultIndex] = useState(null);
-    const [isProcessing, setIsProcessing] = useState(false); // Nuevo estado para prevenir clics múltiples
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const size = 600, center = size/2, radius = center - 10;
-    const n = titles.length, slice = 360 / (n || 1);
+    // Filtrar títulos disponibles excluyendo los seleccionados
+    const availableTitles = titles.filter(title => !excludedOptions.includes(title));
+    const n = availableTitles.length, slice = 360 / (n || 1);
     const colors = useMemo(() => [
       '#e6194b','#f58231','#ffe119','#3cb44b','#42d4f4','#4363d8'
     ], []);
@@ -203,7 +205,7 @@ export default function RuletaIncidencias() {
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
         
         const mid = (start + end)/2;
-        const texto = titles[i] || '';
+        const texto = availableTitles[i] || '';
         const textSize = getTextSize(texto, slice);
         const lines = wrapText(texto, Math.max(6, Math.floor(15 - slice/12)));
         
@@ -229,7 +231,7 @@ export default function RuletaIncidencias() {
         
         ctx.restore();
       }
-    }, [titles, slice, center, radius, colors, n]);
+    }, [availableTitles, slice, center, radius, colors, n]);
 
     useEffect(() => {
       draw();
@@ -238,7 +240,7 @@ export default function RuletaIncidencias() {
     const spin = () => {
       if (spinning || n === 0 || showResult || isProcessing) return;
       
-      setIsProcessing(true); // Bloquear inmediatamente
+      setIsProcessing(true);
       setSpinning(true);
       setShowResult(false);
       
@@ -255,10 +257,11 @@ export default function RuletaIncidencias() {
         const anguloPointer = (360 - anguloNormalizado) % 360;
         const indiceSeleccionado = Math.floor(anguloPointer / slice) % n;
         
-        setResultText(titles[indiceSeleccionado] || '');
-        setResultIndex(indiceSeleccionado);
+        setResultText(availableTitles[indiceSeleccionado] || '');
+        // Encontrar el índice en el array original
+        const originalIndex = titles.indexOf(availableTitles[indiceSeleccionado]);
+        setResultIndex(originalIndex);
         
-        // Reducir tiempo de pausa a 1 segundo para más agilidad
         setTimeout(() => {
           setShowResult(true);
         }, 1000);
@@ -267,7 +270,7 @@ export default function RuletaIncidencias() {
 
     const continueToNext = () => {
       setShowResult(false);
-      setIsProcessing(false); // Permitir nuevo ciclo
+      setIsProcessing(false);
       onResult(resultIndex);
     };
 
@@ -340,11 +343,13 @@ export default function RuletaIncidencias() {
                 ? 'linear-gradient(45deg, #9ca3af, #6b7280)' 
                 : showResult
                 ? 'linear-gradient(45deg, #10b981, #059669)'
+                : availableTitles.length < 2
+                ? 'linear-gradient(45deg, #9ca3af, #6b7280)'
                 : 'linear-gradient(45deg, #e53e3e, #dc2626)',
               color: 'white',
               fontSize: (spinning || isProcessing) ? '0.75rem' : showResult ? '0.9rem' : '1rem',
               fontWeight: '700',
-              cursor: (spinning || showResult || isProcessing) ? 'not-allowed' : 'pointer',
+              cursor: (spinning || showResult || isProcessing || availableTitles.length < 2) ? 'not-allowed' : 'pointer',
               zIndex: 4,
               boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
               transition: 'all 0.3s ease',
@@ -355,7 +360,7 @@ export default function RuletaIncidencias() {
               lineHeight: '1.2'
             }}
             onMouseEnter={(e) => {
-              if (!spinning && !showResult && !isProcessing && n > 0) {
+              if (!spinning && !showResult && !isProcessing && availableTitles.length >= 2) {
                 e.target.style.transform = 'translate(-50%, -50%) scale(1.05)';
                 e.target.style.boxShadow = '0 8px 25px rgba(0,0,0,0.4)';
               }
@@ -369,7 +374,8 @@ export default function RuletaIncidencias() {
           >
             {(spinning || isProcessing) ? 'Girando...' : 
              showResult ? 'Resultado' :
-             n === 0 ? 'Sin datos' : 'GIRAR'}
+             availableTitles.length === 0 ? 'Sin datos' : 
+             availableTitles.length < 2 ? 'Mín. 2 opciones' : 'GIRAR'}
           </button>
         </div>
 
@@ -452,6 +458,23 @@ export default function RuletaIncidencias() {
     );
   }
 
+  // Estados para exclusiones por paso
+  const [exclusions, setExclusions] = useState({
+    category: [],
+    incident: [],
+    individual: [],
+    'extra-group': [],
+    'extra-individual': []
+  });
+
+  // Función para manejar exclusiones según el paso actual
+  const handleExclusionChange = (newExclusions) => {
+    setExclusions(prev => ({
+      ...prev,
+      [currentStep]: newExclusions
+    }));
+  };
+
   // Función para obtener títulos según el paso actual
   const getCurrentWheelTitles = () => {
     switch (currentStep) {
@@ -472,17 +495,23 @@ export default function RuletaIncidencias() {
 
   // Función para manejar resultado de la ruleta
   const handleWheelResult = (index) => {
+    const currentTitles = getCurrentWheelTitles();
+    const currentExclusions = exclusions[currentStep] || [];
+    const availableTitles = currentTitles.filter(title => !currentExclusions.includes(title));
+    const selectedTitle = availableTitles[index];
+    const originalIndex = currentTitles.indexOf(selectedTitle);
+
     switch (currentStep) {
       case 'category':
-        setSelectedCategory(categories[index]);
+        setSelectedCategory(categories[originalIndex]);
         setCurrentStep('incident');
         break;
       case 'incident':
-        setSelectedIncident(incidents[index]);
+        setSelectedIncident(incidents[originalIndex]);
         setCurrentStep('choose-path');
         break;
       case 'individual':
-        setSelectedMember(members[index]);
+        setSelectedMember(members[originalIndex]);
         if (selectedPath === 'extra') {
           setCurrentStep('extra-group');
         } else {
@@ -491,15 +520,14 @@ export default function RuletaIncidencias() {
         break;
       case 'extra-group':
         const availableGroups = groups.filter(g => g.id !== selectedGroup?.id);
-        setSelectedExtraGroup(availableGroups[index]);
+        setSelectedExtraGroup(availableGroups[originalIndex]);
         setCurrentStep('extra-individual');
         break;
       case 'extra-individual':
-        setSelectedExtraMember(extraMembers[index]);
+        setSelectedExtraMember(extraMembers[originalIndex]);
         setCurrentStep('comment');
         break;
       default:
-        // Caso default para satisfacer eslint
         console.warn('Paso no reconocido:', currentStep);
         break;
     }
@@ -660,6 +688,8 @@ export default function RuletaIncidencias() {
               titles={getCurrentWheelTitles()}
               onResult={handleWheelResult}
               isLoading={isCurrentStepLoading()}
+              excludedOptions={exclusions[currentStep] || []}
+              onExclusionChange={handleExclusionChange}
             />
           </div>
         )}
@@ -684,6 +714,125 @@ export default function RuletaIncidencias() {
             {getStepMessage()}
           </div>
         </div>
+
+        {/* Panel de exclusión - solo para pasos de sorteo */}
+        {['category', 'incident', 'individual', 'extra-group', 'extra-individual'].includes(currentStep) && getCurrentWheelTitles().length > 2 && (
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            padding: '1rem',
+            borderRadius: '8px',
+            marginBottom: '1rem',
+            border: '2px solid #e53e3e'
+          }}>
+            <h4 style={{ 
+              margin: '0 0 0.75rem 0', 
+              color: '#2d3748',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              textAlign: 'center'
+            }}>
+              🚫 Excluir del Sorteo
+            </h4>
+            <p style={{ 
+              textAlign: 'center', 
+              margin: '0 0 1rem 0', 
+              fontSize: '0.8rem',
+              color: '#666'
+            }}>
+              Disponibles: {getCurrentWheelTitles().filter(title => !(exclusions[currentStep] || []).includes(title)).length} de {getCurrentWheelTitles().length}
+            </p>
+            
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '0.5rem',
+              maxHeight: '200px',
+              overflowY: 'auto'
+            }}>
+              {getCurrentWheelTitles().map((option, index) => {
+                const isExcluded = (exclusions[currentStep] || []).includes(option);
+                const canExclude = getCurrentWheelTitles().length - (exclusions[currentStep] || []).length > 2;
+                
+                return (
+                  <div
+                    key={index}
+                    onClick={() => {
+                      if (isExcluded || canExclude) {
+                        const currentExclusions = exclusions[currentStep] || [];
+                        if (isExcluded) {
+                          handleExclusionChange(currentExclusions.filter(item => item !== option));
+                        } else {
+                          handleExclusionChange([...currentExclusions, option]);
+                        }
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.5rem',
+                      borderRadius: '6px',
+                      border: isExcluded ? '2px solid #dc3545' : '2px solid #28a745',
+                      backgroundColor: isExcluded ? '#ffe6e6' : 'white',
+                      cursor: (isExcluded || canExclude) ? 'pointer' : 'not-allowed',
+                      opacity: (!isExcluded && !canExclude) ? 0.5 : 1,
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <span style={{ 
+                      fontSize: '0.85rem', 
+                      fontWeight: '500',
+                      color: isExcluded ? '#dc3545' : '#2d3748'
+                    }}>
+                      {option}
+                    </span>
+                    {isExcluded && (
+                      <span style={{
+                        color: '#dc3545',
+                        fontWeight: 'bold',
+                        fontSize: '14px'
+                      }}>✕</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: '0.75rem', textAlign: 'center' }}>
+              <button
+                onClick={() => handleExclusionChange([])}
+                disabled={(exclusions[currentStep] || []).length === 0}
+                style={{
+                  background: (exclusions[currentStep] || []).length === 0 ? '#9ca3af' : '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '5px',
+                  cursor: (exclusions[currentStep] || []).length === 0 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8rem',
+                  fontWeight: '600'
+                }}
+              >
+                Limpiar Exclusiones
+              </button>
+            </div>
+
+            {getCurrentWheelTitles().filter(title => !(exclusions[currentStep] || []).includes(title)).length < 2 && (
+              <div style={{
+                background: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '5px',
+                padding: '0.5rem',
+                margin: '0.75rem 0 0 0',
+                textAlign: 'center',
+                color: '#856404',
+                fontSize: '0.8rem'
+              }}>
+                ⚠️ Mínimo 2 opciones para sortear
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Resumen compacto de selecciones anteriores */}
         {(selectedGroup || selectedCategory || selectedIncident || selectedMember || selectedExtraGroup || selectedExtraMember) && (
@@ -1016,7 +1165,7 @@ export default function RuletaIncidencias() {
                 borderRadius: '6px',
                 border: '2px solid #e2e8f0',
                 fontFamily: 'inherit',
-                boxSizing: 'border-box' // Agregar para que el padding no cause desbordamiento
+                boxSizing: 'border-box'
               }}
             />
 
