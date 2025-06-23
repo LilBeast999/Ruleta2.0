@@ -29,5 +29,7 @@ USER appuser
 # Exponer el puerto
 EXPOSE 5000
 
+COPY ./app/models/ ./app/models/
+
 # Comando para ejecutar la aplicación
 CMD ["python", "app.py"]
