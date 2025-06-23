@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Backend service (Python)
+  # Backend service (Python/Flask)
   backend:
     build:
       context: ./backend
@@ -14,13 +14,15 @@ services:
       - FLASK_APP=app.py
       - FLASK_RUN_HOST=0.0.0.0
       - FLASK_RUN_PORT=5000
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend:/app
     networks:
       - ruleta_network
     restart: unless-stopped
 
-  # Frontend service (React)
+  # Frontend service (React con nginx)
   frontend:
     build:
       context: ./mi-proyecto
@@ -33,26 +35,6 @@ services:
     networks:
       - ruleta_network
     restart: unless-stopped
-
-  # Base de datos (opcional - si usas PostgreSQL)
-  db:
-    image: postgres:15-alpine
-    container_name: ruleta_db
-    environment:
-      POSTGRES_DB: ruleta_db
-      POSTGRES_USER: ruleta_user
-      POSTGRES_PASSWORD: ruleta_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
-    ports:
-      - "5433:5432"
-    networks:
-      - ruleta_network
-    restart: unless-stopped
-
-volumes:
-  postgres_data:
 
 networks:
   ruleta_network:
