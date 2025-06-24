@@ -1,5 +1,5 @@
 # Dockerfile para Backend (Python)
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Establecer directorio de trabajo
 WORKDIR /app
@@ -15,8 +15,8 @@ RUN apt-get update && apt-get install -y \
 # Copiar archivos de dependencias
 COPY requirements.txt .
 
-# Actualizar pip y instalar dependencias
-RUN pip install --upgrade pip
+# Actualizar pip e instalar setuptools antes de las dependencias
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código fuente
