@@ -21,6 +21,7 @@ function CRUD() {
   // cargar datos cuando cambia la pestaña activa
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   // fetch de datos según la pestaña activa
@@ -58,6 +59,9 @@ function CRUD() {
           const gruposForAlumData = await gruposForAlumRes.json();
           setAlumnos(Array.isArray(alumnosData) ? alumnosData : []);
           setGrupos(Array.isArray(gruposForAlumData) ? gruposForAlumData : []);
+          break;
+        default:
+          // no hace nada si la pestaña no coincide
           break;
       }
     } catch (error) {
@@ -152,7 +156,6 @@ function CRUD() {
   // renderizar tabla según la pestaña activa
   const renderTable = () => {
     const data = filteredData;
-    
     if (data.length === 0) {
       return (
         <div className="empty-state">

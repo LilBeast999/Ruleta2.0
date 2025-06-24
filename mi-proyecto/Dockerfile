@@ -1,5 +1,5 @@
 # Dockerfile para Frontend (React)
-FROM node:18-alpine
+FROM node:24-alpine
 
 # Establecer directorio de trabajo
 WORKDIR /app
