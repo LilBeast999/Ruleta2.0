@@ -1,24 +1,29 @@
-// src/Ruleta.js
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 
-export default function Ruleta({ titulos = [] }) {
+export default function Ruleta({ defaultTitulos = [] }) {
+  const [rawInput, setRawInput] = useState(defaultTitulos.join('\n'));
   const canvasRef = useRef(null);
   const [spinAngle, setSpinAngle] = useState(0);
   const [spinning, setSpinning] = useState(false);
   const [ganador, setGanador] = useState(null);
 
+  const titulos = rawInput
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line !== '');
+
   const size = 500;
   const center = size / 2;
-  const radius = center - 8;      // espacio para el borde
+  const radius = center - 8;
   const n = titulos.length;
   const slice = 360 / (n || 1);
 
-  const colors = [
+  // Mover arreglo de colores a useMemo para estabilizar la referencia
+  const colors = useMemo(() => [
     '#e6194b','#f58231','#ffe119','#3cb44b',
     '#42d4f4','#4363d8','#f032e6','#a9a9a9'
-  ];
+  ], []);
 
-  // Dibuja segmentos y texto
   const draw = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
@@ -51,7 +56,7 @@ export default function Ruleta({ titulos = [] }) {
       ctx.fillText(t, radius * 0.7, 8);
       ctx.restore();
     });
-  }, [titulos, slice, radius, center]);
+  }, [titulos, slice, center, radius, colors]);
 
   useEffect(() => {
     draw();
@@ -59,65 +64,57 @@ export default function Ruleta({ titulos = [] }) {
     return () => window.removeEventListener('resize', draw);
   }, [draw]);
 
-  // Gira la ruleta
   const spin = () => {
     if (spinning || n === 0) return;
     setSpinning(true);
     setGanador(null);
 
-    // Elegimos un índice al azar
-    const indiceGanador = Math.floor(Math.random() * n);
+    const indice = Math.floor(Math.random() * n);
+    const midSlice = indice * slice + slice / 2;
+    const vueltas = Math.floor(Math.random() * 10) + 3;
+    const final = vueltas * 360 - midSlice;
+    setSpinAngle(final);
 
-    // Calculamos el centro de ese segmento
-    const centroSegmento = indiceGanador * slice + slice / 2;
-
-    // Generamos las vueltas
-    const vueltasCompletas = Math.floor(Math.random() * 10) + 3; // 3 a 12 vueltas
-    const finalAngle = vueltasCompletas * 360 - centroSegmento;
-
-    setSpinAngle(finalAngle);
-
-    // Tras la animación, mostramos el ganador
     setTimeout(() => {
       setSpinning(false);
-      setGanador(titulos[indiceGanador]);
+      setGanador(titulos[indice]);
     }, 4000);
   };
 
-  // Estilos (tomados de la segunda ruleta)
   const styles = {
     container: {
-      textAlign: 'center',
-      position: 'relative',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      gap: '8rem',
+      padding: '2rem'
     },
     wheelContainer: {
-      position: 'relative',
-      display: 'inline-block',
+      position: 'relative'
     },
     wheel: {
-      margin: 'auto',
       width: size,
       height: size,
       borderRadius: '50%',
       boxShadow: '0 0 15px rgba(0,0,0,0.3)',
       transition: 'transform 4s ease-out',
-      transform: `rotate(${spinAngle}deg)`,
+      transform: `rotate(${spinAngle}deg)`
     },
     canvas: {
       borderRadius: '50%',
-      display: 'block',
+      display: 'block'
     },
     pointer: {
       position: 'absolute',
-      top: '50%',
+      top: '45%',
       right: '-20px',
       transform: 'translateY(-50%)',
       width: 0,
       height: 0,
       borderTop: '15px solid transparent',
       borderBottom: '15px solid transparent',
-      borderRight: '20px solid red',
-      zIndex: 2,
+      borderRight: '20px solid red', 
+      zIndex: 2
     },
     center: {
       position: 'absolute',
@@ -129,31 +126,65 @@ export default function Ruleta({ titulos = [] }) {
       top: '50%',
       left: '50%',
       transform: 'translate(-50%,-50%)',
-      zIndex: 1,
+      zIndex: 1
     },
     button: {
-      marginTop: 20,
-      padding: '10px 20px',
-      borderRadius: '5px',
-      backgroundColor: '#61dafb',
+      display: 'block',
+      margin: '1.5rem auto 0',
+      padding: '0.75rem 1.5rem',
+      fontSize: '1rem',
+      fontWeight: 600,
       border: 'none',
-      fontSize: '16px',
+      borderRadius: '6px',
       cursor: 'pointer',
+      transition: 'all 0.2s ease',
+      backgroundColor: '#89ac76',
+      color: 'white',
+      boxShadow: '0 2px 4px rgba(66, 153, 225, 0.3)',
+      // Nuevas propiedades para estados
+      ':disabled': {
+        backgroundColor: '#63b3ed',
+        cursor: 'not-allowed',
+        boxShadow: 'none',
+        transform: 'none'
+      },
+      ':hover:not(:disabled)': {
+        backgroundColor: '#89ac76',
+        transform: 'translateY(-1px)',
+        boxShadow: '0 4px 6px rgba(66, 153, 225, 0.3)'
+      }
     },
     winner: {
       marginTop: 20,
       fontSize: 18,
-      color: '#000',
+      color: '#000'
+    },
+    textareaContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      width: '300px'
+    },
+    label: {
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 10
+    },
+    textarea: {
+      width: 300,           
+      height: 200,         
+      padding: 10,
+      fontSize: 16,
+      borderRadius: 5,
+      border: '1px solid #ccc',
+      resize: 'none',
+      overflow: 'hidden',  
     }
   };
 
   return (
     <div style={styles.container}>
       <div style={styles.wheelContainer}>
-        {/* Flecha indicadora */}
         <div style={styles.pointer} />
-
-        {/* Ruleta giratoria */}
         <div style={styles.wheel}>
           <canvas
             ref={canvasRef}
@@ -163,17 +194,36 @@ export default function Ruleta({ titulos = [] }) {
           />
           <div style={styles.center} />
         </div>
+
+         <button 
+            onClick={spin} 
+            disabled={spinning} 
+            style={{
+              ...styles.button,
+              // Sobreescribe pseudo-clases para React
+              backgroundColor: spinning ? '#63b3ed' : '#89ac76',
+              transform: spinning ? 'none' : 'translateY(0)',
+              boxShadow: spinning ? 'none' : '0 2px 4px rgba(66, 153, 225, 0.3)'
+            }}
+            >
+          {spinning ? 'Girando…' : 'Girar ruleta'}
+        </button>
       </div>
 
-      <button onClick={spin} disabled={spinning} style={styles.button}>
-        {spinning ? 'Girando…' : 'Girar ruleta'}
-      </button>
-
-      {ganador && (
-        <div style={styles.winner}>
-          Resultado: <strong>{ganador}</strong>
-        </div>
-      )}
+      <div style={styles.textareaContainer}>
+        <label style={styles.label}>Títulos para la Ruleta</label>
+        <textarea
+          style={styles.textarea}
+          value={rawInput}
+          onChange={e => setRawInput(e.target.value)}
+          placeholder="Escribe cada opción en una línea"
+        />
+        {ganador && (
+          <div style={styles.winner}>
+            Ganador: <strong>{ganador}</strong>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
