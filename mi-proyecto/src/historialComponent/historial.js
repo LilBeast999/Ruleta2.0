@@ -148,22 +148,21 @@ function Historial({ onBackToMenu }) {
             </thead>
             <tbody>
               {historial.map((item) => {
-                // Tratar la fecha como string y crear Date manualmente para evitar conversiones de zona horaria
+                // Tratar la fecha como string y crear Date manualmente para evitar desfase horario
                 let fecha;
                 try {
-                  // Si la fecha viene como string "YYYY-MM-DD HH:MM:SS", parsearlo manualmente
+                  // Si la fecha viene como string "YYYY-MM-DD HH:MM:SS", parsear como local
                   if (typeof item.fecha === 'string' && item.fecha.includes(' ')) {
                     const [fechaParte, horaParte] = item.fecha.split(' ');
                     const [año, mes, dia] = fechaParte.split('-');
                     const [hora, minuto, segundo] = horaParte.split(':');
-                    
-                    // Crear fecha local sin conversión de zona horaria
+                    // Crear fecha como local (no UTC)
                     fecha = new Date(
-                      parseInt(año), 
-                      parseInt(mes) - 1, // Los meses en JavaScript van de 0-11
-                      parseInt(dia), 
-                      parseInt(hora), 
-                      parseInt(minuto), 
+                      parseInt(año),
+                      parseInt(mes) - 1,
+                      parseInt(dia),
+                      parseInt(hora),
+                      parseInt(minuto),
                       parseInt(segundo || 0)
                     );
                   } else {
@@ -184,7 +183,8 @@ function Historial({ onBackToMenu }) {
                       <td>{fecha.toLocaleDateString('es-CL', { 
                         day: '2-digit', 
                         month: '2-digit', 
-                        year: 'numeric'
+                        year: 'numeric',
+                        timeZone: 'America/Santiago'
                       })}</td>
                       <td>
                         {item.comentario.length > 30
@@ -214,7 +214,8 @@ function Historial({ onBackToMenu }) {
                               month: 'long', 
                               day: 'numeric', 
                               hour: '2-digit', 
-                              minute: '2-digit'
+                              minute: '2-digit',
+                              timeZone: 'America/Santiago'
                             })}</p>
                             <p><strong>Comentario:</strong> {item.comentario}</p>
                             {item.alumno && (
