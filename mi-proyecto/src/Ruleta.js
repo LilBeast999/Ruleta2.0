@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 
 export default function Ruleta({ defaultTitulos = [] }) {
   const [rawInput, setRawInput] = useState(defaultTitulos.join('\n'));
@@ -18,10 +18,11 @@ export default function Ruleta({ defaultTitulos = [] }) {
   const n = titulos.length;
   const slice = 360 / (n || 1);
 
-  const colors = [
+  // Mover arreglo de colores a useMemo para estabilizar la referencia
+  const colors = useMemo(() => [
     '#e6194b','#f58231','#ffe119','#3cb44b',
     '#42d4f4','#4363d8','#f032e6','#a9a9a9'
-  ];
+  ], []);
 
   const draw = useCallback(() => {
     const c = canvasRef.current;
@@ -55,7 +56,7 @@ export default function Ruleta({ defaultTitulos = [] }) {
       ctx.fillText(t, radius * 0.7, 8);
       ctx.restore();
     });
-  }, [titulos, slice]);
+  }, [titulos, slice, center, radius, colors]);
 
   useEffect(() => {
     draw();
