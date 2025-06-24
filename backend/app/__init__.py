@@ -3,7 +3,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from flask_migrate import Migrate
-from dotenv import load_dotenv
 from sqlalchemy import text
 
 
@@ -11,22 +10,20 @@ db = SQLAlchemy()
 migrate = Migrate()
 
 def create_app():
-    load_dotenv()
-
     app = Flask(__name__)
     CORS(app, resources={r"/*": {"origins": "*"}})
 
-    # Configuración de base de datos con fallback a SQLite
+    # Configuración de base de datos
     DATABASE_URL = os.getenv("DATABASE_URL")
     if DATABASE_URL:
-        print("Usando base de datos externa (NeonDB)")
+        print(f"Usando base de datos: {DATABASE_URL}")
         app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
     else:
-        print("Usando SQLite local para desarrollo")
-        # SQLite local - se crea automáticamente
+        # fallback SQLite local en desarrollo
         sqlite_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ruleta.db')
         app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{sqlite_path}"
-    
+        print("Usando SQLite local para desarrollo")
+
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
