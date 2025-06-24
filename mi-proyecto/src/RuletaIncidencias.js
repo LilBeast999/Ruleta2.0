@@ -715,8 +715,8 @@ export default function RuletaIncidencias() {
           </div>
         </div>
 
-        {/* Panel de exclusión - solo para pasos de sorteo */}
-        {['category', 'incident', 'individual', 'extra-group', 'extra-individual'].includes(currentStep) && getCurrentWheelTitles().length > 2 && (
+        {/* Panel de exclusión - solo para pasos de sorteo que NO sean category o incident */}
+        {['individual', 'extra-group', 'extra-individual'].includes(currentStep) && getCurrentWheelTitles().length > 2 && (
           <div style={{
             backgroundColor: '#f8f9fa',
             padding: '1rem',
