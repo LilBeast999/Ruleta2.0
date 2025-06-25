@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './crud.css';
+import config from '../config';
 
 function CRUD() {
   // estados principales para cada entidad
@@ -29,15 +30,15 @@ function CRUD() {
     try {
       switch (activeTab) {
         case 'categorias':
-          const categoriasRes = await fetch('http://localhost:5000/categorias');
+          const categoriasRes = await fetch(`${config.API_BASE_URL}/categorias`);
           const categoriasData = await categoriasRes.json();
           setCategorias(Array.isArray(categoriasData) ? categoriasData : []);
           break;
         case 'incidencias':
           // cargar incidencias y categorías para el formulario
           const [incidenciasRes, categoriasForIncRes] = await Promise.all([
-            fetch('http://localhost:5000/incidencias'),
-            fetch('http://localhost:5000/categorias')
+            fetch(`${config.API_BASE_URL}/incidencias`),
+            fetch(`${config.API_BASE_URL}/categorias`)
           ]);
           const incidenciasData = await incidenciasRes.json();
           const categoriasForIncData = await categoriasForIncRes.json();
@@ -45,15 +46,15 @@ function CRUD() {
           setCategorias(Array.isArray(categoriasForIncData) ? categoriasForIncData : []);
           break;
         case 'grupos':
-          const gruposRes = await fetch('http://localhost:5000/grupos');
+          const gruposRes = await fetch(`${config.API_BASE_URL}/grupos`);
           const gruposData = await gruposRes.json();
           setGrupos(Array.isArray(gruposData) ? gruposData : []);
           break;
         case 'alumnos':
           // cargar alumnos y grupos para el formulario
           const [alumnosRes, gruposForAlumRes] = await Promise.all([
-            fetch('http://localhost:5000/alumnos'),
-            fetch('http://localhost:5000/grupos')
+            fetch(`${config.API_BASE_URL}/alumnos`),
+            fetch(`${config.API_BASE_URL}/grupos`)
           ]);
           const alumnosData = await alumnosRes.json();
           const gruposForAlumData = await gruposForAlumRes.json();
@@ -89,7 +90,7 @@ function CRUD() {
     
     try {
       const endpoint = getEndpoint();
-      await fetch(`http://localhost:5000/${endpoint}/${id}`, { method: 'DELETE' });
+      await fetch(`${config.API_BASE_URL}/${endpoint}/${id}`, { method: 'DELETE' });
       loadData();
     } catch (error) {
       console.error('Error eliminando:', error);
@@ -104,8 +105,8 @@ function CRUD() {
       const endpoint = getEndpoint();
       const method = editingItem ? 'PUT' : 'POST';
       const url = editingItem 
-        ? `http://localhost:5000/${endpoint}/${editingItem.id}`
-        : `http://localhost:5000/${endpoint}`;
+        ? `${config.API_BASE_URL}/${endpoint}/${editingItem.id}`
+        : `${config.API_BASE_URL}/${endpoint}`;
       
       await fetch(url, {
         method,

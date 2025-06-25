@@ -1,6 +1,7 @@
 // src/RuletaIncidencias.js
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import './RuletaIncidencias.css';
+import config from './config';
 
 export default function RuletaIncidencias() {
   // Estados del flujo paso a paso
@@ -48,10 +49,10 @@ export default function RuletaIncidencias() {
       try {
         // Cargar grupos y sorteos del día en paralelo
         const [gruposRes, sorteosHoyRes] = await Promise.all([
-          fetch('http://localhost:5000/grupos'),
-          fetch('http://localhost:5000/sorteos/hoy')
+          fetch(`${config.API_BASE_URL}/grupos`),
+          fetch(`${config.API_BASE_URL}/sorteos/hoy`)
         ]);
-        
+
         const gruposData = await gruposRes.json();
         const sorteosHoyData = await sorteosHoyRes.json();
         
@@ -74,7 +75,7 @@ export default function RuletaIncidencias() {
   useEffect(() => {
     if (currentStep === 'category') {
       setLoading(prev => ({ ...prev, categories: true }));
-      fetch('http://localhost:5000/categorias')
+      fetch(`${config.API_BASE_URL}/categorias`)
         .then(r => r.json())
         .then(data => {
           setCategories(Array.isArray(data) ? data : []);
@@ -91,7 +92,7 @@ export default function RuletaIncidencias() {
   useEffect(() => {
     if (currentStep === 'incident' && selectedCategory) {
       setLoading(prev => ({ ...prev, incidents: true }));
-      fetch(`http://localhost:5000/incidencias/categoria/${selectedCategory.id}`)
+      fetch(`${config.API_BASE_URL}/incidencias/categoria/${selectedCategory.id}`)
         .then(r => r.json())
         .then(data => {
           setIncidents(Array.isArray(data) ? data : []);
@@ -108,7 +109,7 @@ export default function RuletaIncidencias() {
   useEffect(() => {
     if (currentStep === 'individual' && selectedGroup && !members.length) {
       setLoading(prev => ({ ...prev, members: true }));
-      fetch(`http://localhost:5000/grupo/${selectedGroup.id}`)
+      fetch(`${config.API_BASE_URL}/grupo/${selectedGroup.id}`)
         .then(r => r.json())
         .then(data => {
           setMembers(Array.isArray(data.alumnos) ? data.alumnos : []);
@@ -125,7 +126,7 @@ export default function RuletaIncidencias() {
   useEffect(() => {
     if (currentStep === 'extra-individual' && selectedExtraGroup) {
       setLoading(prev => ({ ...prev, extraMembers: true }));
-      fetch(`http://localhost:5000/grupo/${selectedExtraGroup.id}`)
+      fetch(`${config.API_BASE_URL}/grupo/${selectedExtraGroup.id}`)
         .then(r => r.json())
         .then(data => {
           setExtraMembers(Array.isArray(data.alumnos) ? data.alumnos : []);
@@ -593,7 +594,7 @@ export default function RuletaIncidencias() {
     };
 
     try {
-      const response = await fetch('http://localhost:5000/sorteo', {
+      const response = await fetch(`${config.API_BASE_URL}/sorteo`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -608,7 +609,7 @@ export default function RuletaIncidencias() {
       
       // Actualizar sorteos del día después de guardar
       try {
-        const sorteosHoyRes = await fetch('http://localhost:5000/sorteos/hoy');
+        const sorteosHoyRes = await fetch(`${config.API_BASE_URL}/sorteos/hoy`);
         const sorteosHoyData = await sorteosHoyRes.json();
         setSorteosHoy(Array.isArray(sorteosHoyData) ? sorteosHoyData : []);
       } catch (error) {

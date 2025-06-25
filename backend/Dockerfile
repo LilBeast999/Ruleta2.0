@@ -27,7 +27,7 @@ RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser
 
 # Exponer el puerto
-EXPOSE 5000
+EXPOSE 7002
 
 COPY ./app/models/ ./app/models/
 

@@ -1,6 +1,7 @@
 // src/menuComponent/ExcelUploadModal.js
 import React, { useState } from 'react';
 import './ExcelUploadModal.css';
+import config from '../config';
 
 export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -44,9 +45,9 @@ export default function ExcelUploadModal({ isOpen, onClose, onFileSelected }) {
     // define la url según el tipo de excel seleccionado
     let url = '';
     if (selectedFile.type === 'incidencias') {
-      url = 'http://127.0.0.1:5000/upload_excel_incidencias';
+      url = `${config.API_BASE_URL}/upload_excel_incidencias`;
     } else if (selectedFile.type === 'alumnos') {
-      url = 'http://127.0.0.1:5000/upload_excel_grupos_alumnos';
+      url = `${config.API_BASE_URL}/upload_excel_grupos_alumnos`;
     }
 
     try {

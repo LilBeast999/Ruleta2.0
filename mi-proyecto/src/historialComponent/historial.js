@@ -1,6 +1,7 @@
 // src/historial.js
 import React, { useState, useEffect } from 'react';
 import './historial.css';
+import config from '../config';
 
 function Historial({ onBackToMenu }) {
   const [filtros, setFiltros] = useState({
@@ -12,7 +13,7 @@ function Historial({ onBackToMenu }) {
   const [historial, setHistorial] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/sorteos')  // Ajusta la URL según tu configuración
+    fetch(`${config.API_BASE_URL}/sorteos`)  // Ajusta la URL según tu configuración
       .then(response => response.json())
       .then(data => {
         const sortedData = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
@@ -36,7 +37,7 @@ function Historial({ onBackToMenu }) {
       filtros.hasta.trim() === "" &&
       filtros.grupo.trim() === ""
     ) {
-      fetch('http://localhost:5000/sorteos')
+      fetch(`${config.API_BASE_URL}/sorteos`)
         .then(response => {
           if (!response.ok) {
             throw new Error("Error en la respuesta del servidor");
@@ -68,7 +69,7 @@ function Historial({ onBackToMenu }) {
       fechaTermino = new Date().toISOString();
     }
 
-    const url = `http://localhost:5000/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
+    const url = `${config.API_BASE_URL}/sorteos?fecha_inicio=${encodeURIComponent(fechaInicio)}&fecha_termino=${encodeURIComponent(fechaTermino)}&grupo=${encodeURIComponent(grupo)}`;
 
     fetch(url)
       .then(response => {

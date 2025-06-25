@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logo from './logo.png';
 import avatarPlaceholder from './avatar.png';
+import config from './config';
 
 function Login({ onLogin }) {
   const [rut, setRut] = useState('');
@@ -25,7 +26,7 @@ function Login({ onLogin }) {
       return;
     }
     try {
-      const response = await fetch('http://127.0.0.1:5000/login', {
+      const response = await fetch(`${config.API_BASE_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -91,7 +92,7 @@ function Login({ onLogin }) {
     }
     
     try {
-      const response = await fetch('http://127.0.0.1:5000/register', {
+      const response = await fetch(`${config.API_BASE_URL}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
