@@ -1,10 +1,11 @@
 .menu-container {
-  min-height: calc(100vh - 80px);
+  min-height: auto; /* Cambiar de calc(100vh - 80px) a auto */
+  flex: 1 0 auto;  /* Hace que el menú tome el espacio disponible */
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: 1rem 2rem; /* Reducido el padding vertical */
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   font-family: 'Arial', sans-serif;
 }
@@ -159,7 +160,8 @@
 
 /* Añadir información adicional en los botones */
 .menu-info-section {
-  margin-top: 2rem;
+  margin-top: 1rem; /* Reducido de 1.5rem */
+  margin-bottom: 1rem; /* Añadido para controlar espacio inferior */
   width: 100%;
   max-width: 1100px;
   display: grid;
@@ -169,7 +171,7 @@
 
 .info-card {
   background: white;
-  padding: 1.5rem;
+  padding: 1rem; /* Reducir de 1.5rem a 1rem */
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   text-align: center;

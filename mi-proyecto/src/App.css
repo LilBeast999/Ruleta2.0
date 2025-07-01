@@ -7,6 +7,27 @@ body, html, #root {
   background: #fff;
 }
 
+/* Estructura principal para asegurar que el footer esté abajo */
+.App {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Arreglar el espacio excesivo */
+.content {
+  flex: 1 0 auto;
+  padding-bottom: 1rem; /* Reducido de 2rem a 1rem */
+}
+
+/* Corregir estilos duplicados para evitar conflictos */
+.content {
+  display: flex;
+  max-width: 1200px; /* Aumentado para mejor layout */
+  margin: 20px auto; /* Reducido de 40px a 20px */
+  padding: 0 20px;
+}
+
 /* CABECERA */
 .header {
   display: flex;
@@ -35,12 +56,6 @@ body, html, #root {
 }
 
 /* ÁREA DE CONTENIDO: dos columnas */
-.content {
-  display: flex;
-  max-width: 1000px;
-  margin: 40px auto;
-  padding: 0 20px;
-}
 .ruleta-section {
   flex: 1;
   text-align: center;

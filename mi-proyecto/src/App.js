@@ -3,6 +3,7 @@ import Ruleta from './Ruleta';
 import Menu from './menuComponent/Menu';
 import Historial from './historialComponent/historial';
 import Navbar from './NavbarComponent/navbar';
+import Footer from './FooterComponent/footer';
 import RuletaIncidencias from './RuletaIncidencias';
 import CRUD from './CRUDcomponent/crud';
 import './App.css';
@@ -31,6 +32,7 @@ function App() {
         onBack={currentView !== 'menu' ? () => setCurrentView('menu') : null}
       />
 
+      {/* Contenido principal */}
       {currentView === 'menu' && (
         <Menu
           onCreateRuleta={() => setCurrentView('ruletaEstandar')}
@@ -59,6 +61,9 @@ function App() {
       {currentView === 'crud' && (
         <CRUD />
       )}
+
+      {/* Footer que aparece en todas las vistas */}
+      <Footer />
     </div>
   );
 }
